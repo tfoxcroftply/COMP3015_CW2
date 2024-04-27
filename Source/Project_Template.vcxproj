@@ -158,6 +158,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Camera.h" />
+    <ClInclude Include="Game.h" />
     <ClInclude Include="helper\aabb.h" />
     <ClInclude Include="helper\drawable.h" />
     <ClInclude Include="helper\objmesh.h" />

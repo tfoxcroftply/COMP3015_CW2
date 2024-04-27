@@ -2,6 +2,7 @@
 #include "scenebasic_uniform.h"
 #include "Camera.h"
 #include "ObjectGen.h"
+#include "Game.h"
 
 using std::string;
 using std::cerr;
