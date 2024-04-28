@@ -2,7 +2,7 @@
 #include "helper/objmesh.h"
 class Game {
 private:
-	std::unique_ptr<ObjMesh> NodeModel;
+
 	int CurrentCheckpoint = 0;
 	float DetectionDistance = 5;
 	bool Finished = false;
@@ -12,9 +12,13 @@ private:
 		glm::vec3(3,5,5)
 	};
 public:
+	std::unique_ptr<ObjMesh> NodeModel;
+	unsigned int NodeTexture;
+
 	bool Init() {
 		NodeModel = ObjMesh::load("resources/models/node.obj");
-		if (NodeModel != nullptr) {
+		NodeTexture = LoadTexture("resources/textures/node.png");
+		if (NodeModel != nullptr && NodeTexture != -1) {
 			return true;
 		}
 	}

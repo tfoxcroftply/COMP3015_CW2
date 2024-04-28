@@ -23,6 +23,7 @@ std::unique_ptr<ObjMesh> seaMesh;
 int boatTexture;
 int seaTexture;
 int seaTexture2;
+Game GameSession;
 
 SceneBasic_Uniform::SceneBasic_Uniform() : angle(0.0f) {}
 
@@ -77,6 +78,10 @@ void SceneBasic_Uniform::initScene()
     seaTexture2 = LoadTexture("resources/textures/seaoverlay.png");
     sea.Transformation = glm::rotate(sea.Transformation, glm::radians(180.0f), vec3(0.0f, 0.0f, 0.0f));
     sea.Transformation = glm::scale(mat4(1.0f), vec3(40.0f, 1.0f, 40.0f));
+
+    if (!GameSession.Init()) {
+        cout << "Game loading encountered an error.";
+    }
 
     //glEnable(GL_DEPTH_TEST);
     //glDepthFunc(GL_LESS);
@@ -161,6 +166,19 @@ void SceneBasic_Uniform::render() // Render loop
     glActiveTexture(GL_TEXTURE2); // Overlay texture
     glBindTexture(GL_TEXTURE_2D, seaTexture2);
     seaMesh->render();
+    prog.setUniform("MixEnabled", false);
+
+    std::vector<glm::vec3> Nodes = GameSession.GetActiveNodes();
+    for (unsigned int i = 0; i < Nodes.size(); i++) {
+        mat4 NodeBase = mat4(1.0f);
+        NodeBase[3][0] = Nodes[i].x;
+        NodeBase[3][1] = Nodes[i].y;
+        NodeBase[3][2] = Nodes[i].z;
+        glActiveTexture(GL_TEXTURE1); // First texture
+        glBindTexture(GL_TEXTURE_2D, GameSession.NodeTexture);
+        prog.setUniform("ModelIn", NodeBase);
+        GameSession.NodeModel->render();
+    }
 
     //Timing
     while (glfwGetTime() - currentFrame < 1 / FrameRate) {}
