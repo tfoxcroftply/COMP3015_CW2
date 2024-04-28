@@ -1,6 +1,6 @@
 
 #include "scenebasic_uniform.h"
-#include "Camera.h"
+#include "BoatControls.h"
 #include "ObjectGen.h"
 #include "Game.h"
 
@@ -13,7 +13,7 @@ using glm::mat4;
 using glm::scale;
 
 // Would have defined it in the header however it seemed to break STBI
-Camera camera;
+Boat boat;
 GLFWwindow* mainWindow;
 Model object;
 Model skybox;
@@ -27,9 +27,9 @@ Game GameSession;
 
 SceneBasic_Uniform::SceneBasic_Uniform() : angle(0.0f) {}
 
-void mouse_callback(GLFWwindow* Window, double X, double Y) {
-    camera.MouseInput(X, Y); // Send data to the camera for processing
-}
+//void mouse_callback(GLFWwindow* Window, double X, double Y) {
+  //  camera.MouseInput(X, Y); // Send data to the camera for processing
+//}
 
 void SceneBasic_Uniform::initScene()
 {
@@ -37,9 +37,9 @@ void SceneBasic_Uniform::initScene()
     prog.printActiveUniforms();
 
     mainWindow = glfwGetCurrentContext(); // Get the window location. Had to be called here since the lab libraries didn't seem to set it anywhere.
-    camera.Window = mainWindow;
+    boat.Window = mainWindow;
 
-    glfwSetCursorPosCallback(mainWindow, mouse_callback); // Define mouse callback function
+    //glfwSetCursorPosCallback(mainWindow, mouse_callback); // Define mouse callback function
     glfwSetInputMode(mainWindow, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
 
@@ -81,7 +81,10 @@ void SceneBasic_Uniform::initScene()
 
     if (!GameSession.Init()) {
         cout << "Game loading encountered an error.";
-    }
+        exit(0);
+    }                   
+
+    boat.Init();
 
     //glEnable(GL_DEPTH_TEST);
     //glDepthFunc(GL_LESS);
@@ -116,16 +119,17 @@ void SceneBasic_Uniform::render() // Render loop
     lastFrame = currentFrame;
 
     //Camera
-    camera.Update(deltaTime); // Delta time is used to not have abnormal movement depending on frame time
-    prog.setUniform("CameraPos", camera.Position); // Send camera position for lighting calculations
-
-    //MVP
-    prog.setUniform("ViewIn", camera.GetViewMatrix()); // Send MVP base to shader, but leave models to be set per model
-    prog.setUniform("ProjectionIn", camera.Projection);
-    prog.setUniform("ModelIn", mat4(1.0f));
+    boat.Update(deltaTime); // Delta time is used to not have abnormal movement depending on frame time
 
     //Others
+    prog.setUniform("ModelIn", mat4(1.0f));
     prog.setUniform("MixEnabled", false); // Disable texture mixing to not cause issues 
+
+    CameraData CamData = boat.GetCameraData();
+
+    prog.setUniform("CameraPos", CamData.CameraPosition); // Send camera position for lighting calculations
+    prog.setUniform("ViewIn", CamData.ViewMatrix); // Send MVP base to shader, but leave models to be set per model
+    prog.setUniform("ProjectionIn", boat.Projection);
 
     //Skybox
     glDisable(GL_DEPTH_TEST);
@@ -138,21 +142,9 @@ void SceneBasic_Uniform::render() // Render loop
     glEnable(GL_DEPTH_TEST);
     prog.setUniform("SkyboxActive", false);
 
-    // Boat
-    mat4 Base = glm::rotate(mat4(1.0f), glm::radians(-90.0f), vec3(1.0f, 0.0f, 0.0f));
-    Base = glm::scale(Base, glm::vec3(0.025f, 0.025f, 0.025f));
 
-    if (MovementEnabled) {
-        float Calculation = ((sin((glfwGetTime() * SpeedMultiplier) - startTime) + 1 / 2) * MovementDistance);
-        float RotationCalculation = (sin((glfwGetTime() * 5.0f) - startTime) + 1 / 2) * 2;
-        float RotationDeg = fmod(glfwGetTime() * (360.0f / 20.0f), 360.0f); // remainder but i dont know if it could cause processing issues with a long run time
-        Base = glm::rotate(Base, glm::radians(RotationDeg), vec3(0.0f, 0.0f, 1.0f));
-        Base = glm::translate(Base, vec3(150.0f, 00.0f, 0.0f));
-        mat4 Position = glm::translate(Base, vec3(0, 0, Calculation - 0.5f));
-        Base = glm::rotate(Position, glm::radians(RotationCalculation), vec3(0.0f, 1.0f, 0.0f));
-    }
-
-    prog.setUniform("ModelIn", Base);
+    // Boat render
+    prog.setUniform("ModelIn", boat.GetBoatMatrix());
     glActiveTexture(GL_TEXTURE1);
     glBindTexture(GL_TEXTURE_2D, boatTexture);
     boatMesh->render();
@@ -168,14 +160,22 @@ void SceneBasic_Uniform::render() // Render loop
     seaMesh->render();
     prog.setUniform("MixEnabled", false);
 
+
+
+
+    // Game logic
+    GameSession.UpdatePlayerPosition(boat.GetBoatPosition());
     std::vector<glm::vec3> Nodes = GameSession.GetActiveNodes();
     for (unsigned int i = 0; i < Nodes.size(); i++) {
         mat4 NodeBase = mat4(1.0f);
         NodeBase[3][0] = Nodes[i].x;
         NodeBase[3][1] = Nodes[i].y;
         NodeBase[3][2] = Nodes[i].z;
+
+        float RotationDeg = fmod(glfwGetTime() * (360.0f / 5.0f), 360.0f);
+        NodeBase = glm::rotate(NodeBase, glm::radians(RotationDeg), vec3(0.0f, 1.0f, 0.0f));
         glActiveTexture(GL_TEXTURE1); // First texture
-        glBindTexture(GL_TEXTURE_2D, GameSession.NodeTexture);
+        glBindTexture(GL_TEXTURE_2D, (i == 0) ? GameSession.NodeNextTexture : GameSession.NodeTexture );
         prog.setUniform("ModelIn", NodeBase);
         GameSession.NodeModel->render();
     }
@@ -186,7 +186,7 @@ void SceneBasic_Uniform::render() // Render loop
 
 void SceneBasic_Uniform::resize(int w, int h)
 {
-    camera.Projection = glm::perspective(glm::radians(float(FOV)), (float)w / (float)h, 0.01f, 100.0f);
+    boat.Projection = glm::perspective(glm::radians(float(FOV)), (float)w / (float)h, 0.01f, 100.0f);
     glViewport(0,0,w,h);
 }
 

@@ -154,10 +154,9 @@
     <ClCompile Include="helper\trianglemesh.cpp" />
     <ClCompile Include="Init.cpp" />
     <ClCompile Include="scenebasic_uniform.cpp" />
-    <ClCompile Include="Camera.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Camera.h" />
+    <ClInclude Include="BoatControls.h" />
     <ClInclude Include="Game.h" />
     <ClInclude Include="helper\aabb.h" />
     <ClInclude Include="helper\drawable.h" />

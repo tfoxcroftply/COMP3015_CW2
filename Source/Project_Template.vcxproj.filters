@@ -42,9 +42,6 @@
     <ClCompile Include="scenebasic_uniform.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Camera.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="helper\objmesh.cpp">
       <Filter>helper</Filter>
     </ClCompile>
@@ -79,7 +76,7 @@
     <ClInclude Include="helper\glslprogram.h">
       <Filter>helper</Filter>
     </ClInclude>
-    <ClInclude Include="Camera.h">
+    <ClInclude Include="BoatControls.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="ObjectGen.h">
