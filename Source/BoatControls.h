@@ -40,7 +40,7 @@ struct CameraData {
 class Boat {
 private:
 	float BoatHeight = 0.5f;
-	float BoatSpeed = 2.0f;
+	float BoatSpeed = 1.6f;
 	float BoatRotateSensitivity = 1.0f;
 	float BoatScale = 0.02f;
 	float Smoothing = 0.004f;
@@ -51,13 +51,26 @@ private:
 
 	bool IsAccelerating = false;
 	int LastBoatAccelStart = 0;
-	int AccelSpeed = 1;
-	float LastBoatSpeed = 0.0f;
+
+	float AccelSpeed = 0.5f;
+	float BoatThrottle = 0.0f;
+
+	float SteerAccelSpeed = 8.0f;
+	float BoatSteerSpeed = 2.0f;
+	float BoatSteerLeft = 0.0f;
+	float BoatSteerRight = 0.0f;
+
+	float SteerWobbleDegrees = 10.0f;
+	float SteerWobbleAccel = 1.5f;
+	float SteerWobbleLeft = 0.0f;
+	float SteerWobbleRight = 0.0f;
+	float LastWobble = 0.0f;
 
 	glm::vec3 Up = glm::vec3(0.0f, 1.0f, 0.0f);
 	glm::vec3 Front = glm::vec3(0.0f, 0.0f, -1.0f);
 
 	glm::mat4 BoatMatrix = glm::mat4(1.0f);
+	glm::mat4 BoatMatrixPreWobble = glm::mat4(1.0f);
 public:
 	glm::vec3 Position = glm::vec3(-5.0f, 0.5f, 0.0f);
 	glm::mat4 Projection;
@@ -67,31 +80,45 @@ public:
 
 	void Update(float Delta) {
 		if (Window != NULL) {
+			if (BoatMatrixPreWobble != glm::mat4(1.0f)) {
+				BoatMatrix = BoatMatrixPreWobble;
+			}
+
 			float CalcSpeed = 1.0f * Delta;
 			float InverseScale = 1.0f / BoatScale;
+
 			if (KeyPress(GLFW_KEY_W)) {
-				if (!IsAccelerating) {
-					IsAccelerating = true;
-					LastBoatAccelStart = CurrentTime();
-				} else {
-					int TimeSinceStart = CurrentTime() - LastBoatAccelStart; // eg 2500
-					if (TimeSinceStart != 0) {
-						float AccelMultiplier = float(TimeSinceStart) / (AccelSpeed * 1000.0f);
-						AccelMultiplier = Clamp(AccelMultiplier, 0.0f, 1.0f);
-						LastBoatSpeed = AccelMultiplier;
-						BoatMatrix = glm::translate(BoatMatrix, glm::vec3(0.0f, BoatSpeed * CalcSpeed * InverseScale * AccelMultiplier, 0.0f));
-					}
-				}
-			}
-			else if (!KeyPress(GLFW_KEY_W)) {
-				IsAccelerating = false;
+				BoatThrottle = Clamp(BoatThrottle + (AccelSpeed * CalcSpeed), 0.0f, 1.0f);
+			} else {
+				BoatThrottle = Clamp(BoatThrottle - (AccelSpeed * CalcSpeed), 0.0f, 1.0f);
 			}
 			if (KeyPress(GLFW_KEY_A)) {
-				BoatMatrix = glm::rotate(BoatMatrix, glm::radians(BoatRotateSensitivity * CalcSpeed * InverseScale * LastBoatSpeed), glm::vec3(0.0f, 0.0f, 1.0f));
+				BoatSteerLeft = Clamp(BoatSteerLeft + (SteerAccelSpeed * CalcSpeed), -1.0f, 0.0f);
+				SteerWobbleLeft = Clamp(SteerWobbleLeft + (SteerWobbleAccel * CalcSpeed), -1.0f, 0.0f);
+			} else {
+				BoatSteerLeft = Clamp(BoatSteerLeft - (SteerAccelSpeed * CalcSpeed), -1.0f, 0.0f);
+				SteerWobbleLeft = Clamp(SteerWobbleLeft - (SteerWobbleAccel * CalcSpeed), -1.0f, 0.0f);
 			}
 			if (KeyPress(GLFW_KEY_D)) {
-				BoatMatrix = glm::rotate(BoatMatrix, glm::radians(BoatRotateSensitivity * CalcSpeed * InverseScale * LastBoatSpeed), glm::vec3(0.0f, 0.0f, -1.0f));
+				BoatSteerRight = Clamp(BoatSteerRight - (SteerAccelSpeed * CalcSpeed), 0.0f, 1.0f);
+				SteerWobbleRight = Clamp(SteerWobbleRight - (SteerWobbleAccel * CalcSpeed), 0.0f, 1.0f);
+			} else {
+				BoatSteerRight = Clamp(BoatSteerRight + (SteerAccelSpeed * CalcSpeed), 0.0f, 1.0f);
+				SteerWobbleRight = Clamp(SteerWobbleRight + (SteerWobbleAccel * CalcSpeed), 0.0f, 1.0f);
 			}
+
+			float FinalSteer = (BoatSteerLeft + BoatSteerRight) / 2;
+
+			BoatMatrix = glm::rotate(BoatMatrix, glm::radians(FinalSteer * CalcSpeed * InverseScale * BoatThrottle * BoatSteerSpeed), glm::vec3(0.0f, 0.0f, 1.0f));
+			BoatMatrix = glm::translate(BoatMatrix, glm::vec3(0.0f, BoatSpeed * CalcSpeed * InverseScale * BoatSpeed * BoatThrottle, 0.0f));
+			BoatMatrixPreWobble = BoatMatrix;
+
+			float FinalSteerWobble = (SteerWobbleLeft + SteerWobbleRight) / 2;
+			float CalcRotation = -FinalSteerWobble * SteerWobbleDegrees * BoatThrottle;
+
+			LastWobble = glm::mix(LastWobble, CalcRotation, 0.01f); // this prevents sudden stopping of rotation
+
+			BoatMatrix = glm::rotate(BoatMatrix, glm::radians(LastWobble), glm::vec3(0.0f, 1.0f, 0.0f));
 		}
 	}
 

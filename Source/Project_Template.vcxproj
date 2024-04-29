@@ -158,6 +158,7 @@
   <ItemGroup>
     <ClInclude Include="BoatControls.h" />
     <ClInclude Include="Game.h" />
+    <ClInclude Include="gltext.h" />
     <ClInclude Include="helper\aabb.h" />
     <ClInclude Include="helper\drawable.h" />
     <ClInclude Include="helper\objmesh.h" />

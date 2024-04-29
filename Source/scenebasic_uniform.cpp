@@ -4,6 +4,9 @@
 #include "ObjectGen.h"
 #include "Game.h"
 
+#define GLT_IMPLEMENTATION
+#include "gltext.h"
+
 using std::string;
 using std::cerr;
 using std::endl;
@@ -24,6 +27,7 @@ int boatTexture;
 int seaTexture;
 int seaTexture2;
 Game GameSession;
+GLTtext* Timer;
 
 SceneBasic_Uniform::SceneBasic_Uniform() : angle(0.0f) {}
 
@@ -86,6 +90,10 @@ void SceneBasic_Uniform::initScene()
 
     boat.Init();
 
+    gltInit();
+    Timer = gltCreateText();
+
+
     //glEnable(GL_DEPTH_TEST);
     //glDepthFunc(GL_LESS);
 }
@@ -111,6 +119,7 @@ void SceneBasic_Uniform::update(float t)
  
 void SceneBasic_Uniform::render() // Render loop
 {
+    prog.use(); // return original shader as gltext changes it
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // Scene clearing/refreshing
 
     //Timing
@@ -179,6 +188,12 @@ void SceneBasic_Uniform::render() // Render loop
         prog.setUniform("ModelIn", NodeBase);
         GameSession.NodeModel->render();
     }
+
+    gltSetText(Timer, "Hello World!");
+    gltBeginDraw();
+    gltColor(1.0f, 1.0f, 1.0f, 1.0f);
+    gltDrawText2DAligned(Timer, this->width / 2, this->height - 50, 1.5f, GLT_CENTER, GLT_BOTTOM);
+    gltEndDraw();
 
     //Timing
     while (glfwGetTime() - currentFrame < 1 / FrameRate) {}
