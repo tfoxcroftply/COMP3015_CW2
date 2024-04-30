@@ -130,6 +130,8 @@ void SceneBasic_Uniform::render() // Render loop
     //Camera
     boat.Update(deltaTime); // Delta time is used to not have abnormal movement depending on frame time
 
+    prog.setUniform("BlurStrength", BlurIntensity);
+
     //Others
     prog.setUniform("ModelIn", mat4(1.0f));
     prog.setUniform("MixEnabled", false); // Disable texture mixing to not cause issues 

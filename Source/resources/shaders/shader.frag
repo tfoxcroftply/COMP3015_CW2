@@ -22,6 +22,7 @@ uniform float HazeStrength;
 uniform vec3 HazeColor;
 uniform float Brightness;
 uniform float SetReflection;
+uniform float BlurStrength;
 
 uniform vec3 CameraPos;
 

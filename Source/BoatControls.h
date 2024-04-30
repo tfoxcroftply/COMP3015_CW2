@@ -41,9 +41,10 @@ class Boat {
 private:
 	float BoatHeight = 0.5f;
 	float BoatSpeed = 1.6f;
+	float SlowDownMultiplier = 0.5f;
 	float BoatRotateSensitivity = 1.0f;
 	float BoatScale = 0.02f;
-	float Smoothing = 0.05f;
+	float Smoothing = 0.04f;
 	float RotationSmoothing = 0.04f;
 
 	glm::vec3 LastCameraPosition = glm::vec3(0.0f);
@@ -55,12 +56,12 @@ private:
 	float AccelSpeed = 0.5f;
 	float BoatThrottle = 0.0f;
 
-	float SteerAccelSpeed = 4.0f;
+	float SteerAccelSpeed = 1.5f;
 	float BoatSteerSpeed = 2.0f;
 	float BoatSteerLeft = 0.0f;
 	float BoatSteerRight = 0.0f;
 
-	float SteerWobbleDegrees = 10.0f;
+	float SteerWobbleDegrees = 15.0f;
 	float SteerWobbleAccel = 1.5f;
 	float SteerWobbleLeft = 0.0f;
 	float SteerWobbleRight = 0.0f;
@@ -90,7 +91,7 @@ public:
 			if (KeyPress(GLFW_KEY_W)) {
 				BoatThrottle = Clamp(BoatThrottle + (AccelSpeed * CalcSpeed), 0.0f, 1.0f);
 			} else {
-				BoatThrottle = Clamp(BoatThrottle - (AccelSpeed * CalcSpeed), 0.0f, 1.0f);
+				BoatThrottle = Clamp(BoatThrottle - (AccelSpeed * CalcSpeed * SlowDownMultiplier), 0.0f, 1.0f);
 			}
 			if (KeyPress(GLFW_KEY_A)) {
 				BoatSteerLeft = Clamp(BoatSteerLeft + (SteerAccelSpeed * CalcSpeed), -1.0f, 0.0f);

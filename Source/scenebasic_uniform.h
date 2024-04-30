@@ -46,6 +46,8 @@ private:
     float lastFrame = 0.0f;
     float startTime = glfwGetTime();
 
+    float BlurIntensity = 0.0f;
+
     bool MovementEnabled = true;
 
     void compile();
