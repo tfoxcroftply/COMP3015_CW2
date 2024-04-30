@@ -23,6 +23,7 @@ private:
 
     GLuint vaoHandle;
     GLSLProgram prog;
+    GLSLProgram gaussianprog;
     float angle;
 
     const int FrameRate = 144;

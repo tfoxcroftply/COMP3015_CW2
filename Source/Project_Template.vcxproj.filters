@@ -56,6 +56,12 @@
     <None Include="resources\shaders\shader.frag">
       <Filter>Resource Files\shaders</Filter>
     </None>
+    <None Include="resources\shaders\gaussian.frag">
+      <Filter>Resource Files\shaders</Filter>
+    </None>
+    <None Include="gaussian.vert">
+      <Filter>Resource Files\shaders</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="helper\scene.h">

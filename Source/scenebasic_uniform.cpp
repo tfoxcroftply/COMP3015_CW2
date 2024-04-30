@@ -29,6 +29,12 @@ int seaTexture2;
 Game GameSession;
 GLTtext* Timer;
 
+unsigned int Framebuffer;
+unsigned int Renderbuffer;
+unsigned int FramebufferTexture;
+ModelData FramebufferDisplay;
+
+
 SceneBasic_Uniform::SceneBasic_Uniform() : angle(0.0f) {}
 
 //void mouse_callback(GLFWwindow* Window, double X, double Y) {
@@ -93,8 +99,34 @@ void SceneBasic_Uniform::initScene()
     gltInit();
     Timer = gltCreateText();
 
+    // frame buffer object
+    glGenFramebuffers(1, &Framebuffer);
+    glBindFramebuffer(GL_FRAMEBUFFER, Framebuffer);
 
-    //glEnable(GL_DEPTH_TEST);
+    // frame buffer tex
+    glGenTextures(1, &FramebufferTexture);
+    glBindTexture(GL_TEXTURE_2D, FramebufferTexture);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, FramebufferTexture, 0);
+
+    // render buffer
+    glGenRenderbuffers(1, &Renderbuffer);
+    glBindRenderbuffer(GL_RENDERBUFFER, Renderbuffer);
+    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, width, height);
+    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, Renderbuffer);
+
+    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+        cerr << "frame buffer not complete" << endl;
+        exit(EXIT_FAILURE);
+    }
+
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glBindRenderbuffer(GL_RENDERBUFFER, 0);
+    FramebufferDisplay = FrameRectangle();
+    gaussianprog.setUniform("screenTexture", 0);
+
     //glDepthFunc(GL_LESS);
 }
 
@@ -105,11 +137,14 @@ void SceneBasic_Uniform::compile() // Provided by labs
 		prog.compileShader("resources/shaders/shader.frag");
 		prog.link();
 		prog.use();
+
+        gaussianprog.compileShader("resources/shaders/gaussian.vert");
+        gaussianprog.compileShader("resources/shaders/gaussian.frag");
+        gaussianprog.link();
 	} catch (GLSLProgramException &e) {
 		cerr << e.what() << endl;
 		exit(EXIT_FAILURE);
 	}
-
 }
 
 void SceneBasic_Uniform::update(float t)
@@ -119,8 +154,11 @@ void SceneBasic_Uniform::update(float t)
  
 void SceneBasic_Uniform::render() // Render loop
 {
-    prog.use(); // return original shader as gltext changes it
+    glBindFramebuffer(GL_FRAMEBUFFER, Framebuffer);
+    glEnable(GL_DEPTH_TEST);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // Scene clearing/refreshing
+
+    prog.use(); // return original shader as gltext changes it
 
     //Timing
     float currentFrame = glfwGetTime();
@@ -153,7 +191,6 @@ void SceneBasic_Uniform::render() // Render loop
     glEnable(GL_DEPTH_TEST);
     prog.setUniform("SkyboxActive", false);
 
-
     // Boat render
     prog.setUniform("ModelIn", boat.GetBoatMatrix());
     glActiveTexture(GL_TEXTURE1);
@@ -170,9 +207,6 @@ void SceneBasic_Uniform::render() // Render loop
     glBindTexture(GL_TEXTURE_2D, seaTexture2);
     seaMesh->render();
     prog.setUniform("MixEnabled", false);
-
-
-
 
     // Game logic
     GameSession.UpdatePlayerPosition(boat.GetBoatPosition());
@@ -191,11 +225,22 @@ void SceneBasic_Uniform::render() // Render loop
         GameSession.NodeModel->render();
     }
 
-    gltSetText(Timer, "Hello World!");
+
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+    gaussianprog.use();
+
+    glBindVertexArray(FramebufferDisplay.VAO);
+    glDisable(GL_DEPTH_TEST);
+    glBindTexture(GL_TEXTURE_2D, FramebufferTexture);
+    glActiveTexture(GL_TEXTURE0);
+    glDrawArrays(GL_TRIANGLES, 0, 6);
+
+    /*gltSetText(Timer, "Hello World!");
     gltBeginDraw();
     gltColor(1.0f, 1.0f, 1.0f, 1.0f);
     gltDrawText2DAligned(Timer, this->width / 2, this->height - 50, 1.5f, GLT_CENTER, GLT_BOTTOM);
-    gltEndDraw();
+    gltEndDraw(); */
 
     //Timing
     while (glfwGetTime() - currentFrame < 1.0f / FrameRate) {}
