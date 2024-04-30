@@ -134,7 +134,7 @@ void SceneBasic_Uniform::render() // Render loop
     prog.setUniform("ModelIn", mat4(1.0f));
     prog.setUniform("MixEnabled", false); // Disable texture mixing to not cause issues 
 
-    CameraData CamData = boat.GetCameraData();
+    CameraData CamData = boat.GetCameraData(deltaTime);
 
     prog.setUniform("CameraPos", CamData.CameraPosition); // Send camera position for lighting calculations
     prog.setUniform("ViewIn", CamData.ViewMatrix); // Send MVP base to shader, but leave models to be set per model
@@ -196,7 +196,7 @@ void SceneBasic_Uniform::render() // Render loop
     gltEndDraw();
 
     //Timing
-    while (glfwGetTime() - currentFrame < 1 / FrameRate) {}
+    while (glfwGetTime() - currentFrame < 1.0f / FrameRate) {}
 }
 
 void SceneBasic_Uniform::resize(int w, int h)

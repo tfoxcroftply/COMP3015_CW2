@@ -43,8 +43,8 @@ private:
 	float BoatSpeed = 1.6f;
 	float BoatRotateSensitivity = 1.0f;
 	float BoatScale = 0.02f;
-	float Smoothing = 0.004f;
-	float RotationSmoothing = 0.003f;
+	float Smoothing = 0.05f;
+	float RotationSmoothing = 0.04f;
 
 	glm::vec3 LastCameraPosition = glm::vec3(0.0f);
 	glm::vec3 LastCameraOrientation = glm::vec3(0.0f);
@@ -55,7 +55,7 @@ private:
 	float AccelSpeed = 0.5f;
 	float BoatThrottle = 0.0f;
 
-	float SteerAccelSpeed = 8.0f;
+	float SteerAccelSpeed = 4.0f;
 	float BoatSteerSpeed = 2.0f;
 	float BoatSteerLeft = 0.0f;
 	float BoatSteerRight = 0.0f;
@@ -116,7 +116,7 @@ public:
 			float FinalSteerWobble = (SteerWobbleLeft + SteerWobbleRight) / 2;
 			float CalcRotation = -FinalSteerWobble * SteerWobbleDegrees * BoatThrottle;
 
-			LastWobble = glm::mix(LastWobble, CalcRotation, 0.01f); // this prevents sudden stopping of rotation
+			LastWobble = glm::mix(LastWobble, CalcRotation, 0.01f * 144.0f * Delta); // this prevents sudden stopping of rotation
 
 			BoatMatrix = glm::rotate(BoatMatrix, glm::radians(LastWobble), glm::vec3(0.0f, 1.0f, 0.0f));
 		}
@@ -139,7 +139,7 @@ public:
 		return GetPositionFromMatrix(BoatMatrix);
 	}
 
-	CameraData GetCameraData() {
+	CameraData GetCameraData(float Delta) {
 		float InverseScale = 1.0f / BoatScale; // get inverse of boat scale for reverting
 
 		glm::mat4 NewMatrix = BoatMatrix;
@@ -154,8 +154,8 @@ public:
 		glm::vec3 CameraTarget = glm::vec3(BoatPosition.x, BoatPosition.y + 0.4f, BoatPosition.z); // where the camera aims at
 
 		if (LastCameraPosition != glm::vec3(0.0f) && LastCameraOrientation != glm::vec3(0.0f)) {
-			CameraPosition = glm::mix(LastCameraPosition, CameraPosition, Smoothing);
-			CameraTarget = glm::mix(LastCameraOrientation, CameraTarget, RotationSmoothing);
+			CameraPosition = glm::mix(LastCameraPosition, CameraPosition, (Smoothing * 144.0f) * Delta); // values were picked in 144hz testing so use it as a base
+			CameraTarget = glm::mix(LastCameraOrientation, CameraTarget, (RotationSmoothing * 144.0f) * Delta); 
 		}
 
 		LastCameraPosition = CameraPosition;

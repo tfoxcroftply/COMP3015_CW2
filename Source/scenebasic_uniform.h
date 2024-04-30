@@ -25,7 +25,7 @@ private:
     GLSLProgram prog;
     float angle;
 
-    const int FrameRate = 120;
+    const int FrameRate = 144;
     const int FOV = 70;
 
     const glm::vec3 FogColor = glm::vec3(0.91f, 0.92f, 0.93f);
