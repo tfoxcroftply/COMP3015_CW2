@@ -56,10 +56,10 @@
     <None Include="resources\shaders\shader.frag">
       <Filter>Resource Files\shaders</Filter>
     </None>
-    <None Include="resources\shaders\gaussian.frag">
+    <None Include="resources\shaders\framebuffer.frag">
       <Filter>Resource Files\shaders</Filter>
     </None>
-    <None Include="gaussian.vert">
+    <None Include="resources\shaders\framebuffer.vert">
       <Filter>Resource Files\shaders</Filter>
     </None>
   </ItemGroup>
