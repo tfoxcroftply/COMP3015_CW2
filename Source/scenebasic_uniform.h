@@ -23,7 +23,10 @@ private:
 
     GLuint vaoHandle;
     GLSLProgram prog;
-    GLSLProgram gaussianprog;
+    GLSLProgram gaussian;
+    GLSLProgram bloom;
+    GLSLProgram base;
+
     float angle;
 
     const int FrameRate = 144;
@@ -49,6 +52,7 @@ private:
 
     float BlurIntensity = 0.0f;
 
+    bool BloomDebug = false;
     bool MovementEnabled = true;
 
     void compile();

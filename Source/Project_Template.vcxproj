@@ -174,8 +174,12 @@
     <ClInclude Include="scenebasic_uniform.h" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="resources\shaders\framebuffer.frag" />
-    <None Include="resources\shaders\framebuffer.vert" />
+    <None Include="resources\shaders\base.frag" />
+    <None Include="resources\shaders\base.vert" />
+    <None Include="resources\shaders\bloom.frag" />
+    <None Include="resources\shaders\bloom.vert" />
+    <None Include="resources\shaders\gaussian.frag" />
+    <None Include="resources\shaders\gaussian.vert" />
     <None Include="resources\shaders\shader.frag">
       <FileType>Document</FileType>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>

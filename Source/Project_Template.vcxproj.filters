@@ -56,10 +56,22 @@
     <None Include="resources\shaders\shader.frag">
       <Filter>Resource Files\shaders</Filter>
     </None>
-    <None Include="resources\shaders\framebuffer.frag">
+    <None Include="resources\shaders\gaussian.frag">
       <Filter>Resource Files\shaders</Filter>
     </None>
-    <None Include="resources\shaders\framebuffer.vert">
+    <None Include="resources\shaders\gaussian.vert">
+      <Filter>Resource Files\shaders</Filter>
+    </None>
+    <None Include="resources\shaders\bloom.frag">
+      <Filter>Resource Files\shaders</Filter>
+    </None>
+    <None Include="resources\shaders\bloom.vert">
+      <Filter>Resource Files\shaders</Filter>
+    </None>
+    <None Include="resources\shaders\base.frag">
+      <Filter>Resource Files\shaders</Filter>
+    </None>
+    <None Include="resources\shaders\base.vert">
       <Filter>Resource Files\shaders</Filter>
     </None>
   </ItemGroup>

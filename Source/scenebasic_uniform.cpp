@@ -29,9 +29,16 @@ int seaTexture2;
 Game GameSession;
 GLTtext* Timer;
 
-unsigned int Framebuffers[2];
-unsigned int FramebufferTextures[2];
-unsigned int Renderbuffers[2];
+unsigned int Framebuffers[5];
+unsigned int FramebufferTextures[5];
+unsigned int Renderbuffers[5];
+
+unsigned int SceneBuffer = 0;
+unsigned int BloomBuffer = 1;
+unsigned int BloomBuffer2 = 2;
+unsigned int BlurBuffer1 = 3;
+unsigned int BlurBuffer2 = 4;
+
 ModelData FramebufferDisplay;
 
 SceneBasic_Uniform::SceneBasic_Uniform() : angle(0.0f) {}
@@ -44,7 +51,7 @@ void SceneBasic_Uniform::initScene()
 {
     compile();
     prog.printActiveUniforms();
-    gaussianprog.printActiveUniforms();
+    gaussian.printActiveUniforms();
 
     mainWindow = glfwGetCurrentContext(); // Get the window location. Had to be called here since the lab libraries didn't seem to set it anywhere.
     boat.Window = mainWindow;
@@ -100,18 +107,23 @@ void SceneBasic_Uniform::initScene()
     Timer = gltCreateText();
 
     // frame buffer object
-    glGenFramebuffers(2, Framebuffers);
-    glGenTextures(2, FramebufferTextures);
-    glGenRenderbuffers(1, Renderbuffers);
+    int FrameBuffCount = sizeof(Framebuffers) / sizeof(unsigned int);
 
-    for (unsigned int i = 0; i < 2; i++) {
+    glGenFramebuffers(FrameBuffCount, Framebuffers);
+    glGenTextures(FrameBuffCount, FramebufferTextures);
+    glGenRenderbuffers(FrameBuffCount, Renderbuffers);
+
+    for (unsigned int i = 0; i < FrameBuffCount; i++) {
         glBindFramebuffer(GL_FRAMEBUFFER, Framebuffers[i]);
         glBindTexture(GL_TEXTURE_2D, FramebufferTextures[i]);
         glBindRenderbuffer(GL_RENDERBUFFER, Renderbuffers[i]);
 
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, FramebufferTextures[i], 0);
 
@@ -127,10 +139,19 @@ void SceneBasic_Uniform::initScene()
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
     FramebufferDisplay = FrameRectangle();
-    gaussianprog.setUniform("ScreenTexture", 0);
+
+    gaussian.use();
+    gaussian.setUniform("ScreenTexture", 0);
+
+    bloom.use();
+    bloom.setUniform("ScreenTexture", 0);
+    bloom.setUniform("BaseTexture", 1);
 
     glEnable(GL_DEPTH_TEST);
     //glDepthFunc(GL_LESS);
+
+    GameSession.LoadEntries();
+    GameSession.SaveEntry(23023);
 }
 
 void SceneBasic_Uniform::compile() // Provided by labs
@@ -141,9 +162,17 @@ void SceneBasic_Uniform::compile() // Provided by labs
 		prog.link();
 		prog.use();
 
-gaussianprog.compileShader("resources/shaders/framebuffer.vert");
-gaussianprog.compileShader("resources/shaders/framebuffer.frag");
-gaussianprog.link();
+        gaussian.compileShader("resources/shaders/gaussian.vert");
+        gaussian.compileShader("resources/shaders/gaussian.frag");
+        gaussian.link();
+
+        bloom.compileShader("resources/shaders/bloom.vert");
+        bloom.compileShader("resources/shaders/bloom.frag");
+        bloom.link();
+
+        base.compileShader("resources/shaders/base.vert");
+        base.compileShader("resources/shaders/base.frag");
+        base.link();
     }
     catch (GLSLProgramException& e) {
         cerr << e.what() << endl;
@@ -156,16 +185,25 @@ void SceneBasic_Uniform::update(float t)
     // unused
 }
 
+void Blur(int Intensity, GLSLProgram& shader, int StartBuffer) {
+    //glBindFramebuffer(GL_FRAMEBUFFER, SceneBuffer);
+
+    for (unsigned int i = 0; i < Intensity; i++) {
+        bool Horizontal = i % 2 == 0 ? true : false;
+        shader.setUniform("HorizontalPass", Horizontal);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, FramebufferTextures[StartBuffer]);
+        glDrawArrays(GL_TRIANGLES, 0, 6);
+    }
+}
+
 void SceneBasic_Uniform::render() // Render loop
 {
 
     prog.use(); // return original shader as gltext changes it
-    glBindFramebuffer(GL_FRAMEBUFFER, Framebuffers[0]);
+    glBindFramebuffer(GL_FRAMEBUFFER, Framebuffers[SceneBuffer]);
     glEnable(GL_DEPTH_TEST);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // Scene clearing/refreshing
-
-
-
 
     //Timing
     float currentFrame = glfwGetTime();
@@ -231,52 +269,45 @@ void SceneBasic_Uniform::render() // Render loop
         GameSession.NodeModel->render();
     }
 
-    gaussianprog.use();
+
     glDisable(GL_DEPTH_TEST);
 
-    unsigned int Intensity = 5;
-    if (Intensity > 0) {
-        for (unsigned int i = 0; i < Intensity; i++) {
-            bool Last = i == Intensity - 1 ? true : false;
-            bool Horizontal = i % 2 == 0 ? true : false;
+    bloom.use();
+    bloom.setUniform("Mix", false);
+    glBindFramebuffer(GL_FRAMEBUFFER, Framebuffers[BloomBuffer]);
+    glBindVertexArray(FramebufferDisplay.VAO);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, FramebufferTextures[SceneBuffer]);
+    glDrawArrays(GL_TRIANGLES, 0, 6);
 
-            gaussianprog.setUniform("BlurEnabled", true);
-            gaussianprog.setUniform("HorizontalPass", Horizontal);
-            glBindFramebuffer(GL_FRAMEBUFFER, Last ? 0 : Framebuffers[Horizontal]);
+    gaussian.use();
+    Blur(6, gaussian, BloomBuffer);
 
-            glBindVertexArray(FramebufferDisplay.VAO);
-            glActiveTexture(GL_TEXTURE0);
-            glBindTexture(GL_TEXTURE_2D, FramebufferTextures[!Horizontal]);
-            glDrawArrays(GL_TRIANGLES, 0, 6);
+    bloom.use();
+    bloom.setUniform("Mix", true);
+    glBindFramebuffer(GL_FRAMEBUFFER, Framebuffers[SceneBuffer]);
+    glBindVertexArray(FramebufferDisplay.VAO);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, FramebufferTextures[BloomBuffer]);
+    glActiveTexture(GL_TEXTURE1);
+    glBindTexture(GL_TEXTURE_2D, FramebufferTextures[SceneBuffer]);
+    glDrawArrays(GL_TRIANGLES, 0, 6);
 
-        }
-    } else {
-        gaussianprog.setUniform("BlurEnabled", false);
-        glBindFramebuffer(GL_FRAMEBUFFER, 0);
-        glBindVertexArray(FramebufferDisplay.VAO);
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, FramebufferTextures[0]);
-        glDrawArrays(GL_TRIANGLES, 0, 6);
-    }
+    base.use();
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glBindVertexArray(FramebufferDisplay.VAO);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, FramebufferTextures[BloomDebug == true ? BloomBuffer : SceneBuffer]);
+    glDrawArrays(GL_TRIANGLES, 0, 6);
 
     glBindVertexArray(0);
-    //glEnable(GL_DEPTH_TEST);
-
-    //int Cycles = 5;
-
-    //for (unsigned int i = 1; i < 5; ++i) {
-     //   bool Horizontal = i % 2 == 0;
-     //   gaussianprog.setUniform("HorizontalPass", Horizontal);
-    //}
-
-
 
 
     /*gltSetText(Timer, "Hello World!");
-    gltBeginDraw();
-    gltColor(1.0f, 1.0f, 1.0f, 1.0f);
-    gltDrawText2DAligned(Timer, this->width / 2, this->height - 50, 1.5f, GLT_CENTER, GLT_BOTTOM);
-    gltEndDraw(); */
+    //gltBeginDraw();
+    //gltColor(1.0f, 1.0f, 1.0f, 1.0f);
+    //gltDrawText2DAligned(Timer, this->width / 2, this->height - 50, 1.5f, GLT_CENTER, GLT_BOTTOM);
+    //gltEndDraw(); */
 
     //glBindVertexArray(0);
 
