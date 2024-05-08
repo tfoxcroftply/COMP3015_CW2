@@ -33,6 +33,10 @@ unsigned int Framebuffers[5];
 unsigned int FramebufferTextures[5];
 unsigned int Renderbuffers[5];
 
+unsigned int DepthMapFramebuffer;
+unsigned int DepthMapFramebufferTexture;
+unsigned int DepthMapRenderbuffer;
+
 unsigned int SceneBuffer = 0;
 unsigned int BloomBuffer = 1;
 unsigned int BloomBuffer2 = 2;
@@ -70,10 +74,6 @@ void SceneBasic_Uniform::initScene()
     prog.setUniform("LightColor", LightColor);
     prog.setUniform("SetReflection", Reflectance);
 
-    prog.setUniform("skybox", 0); // i found that explicit linking is required on nvidia opengl api, but seems to work without on intel
-    prog.setUniform("Texture", 1);
-    prog.setUniform("Texture2", 2);
-
 
     // Object gen
     //object.Data = GenerateSquare();
@@ -93,6 +93,7 @@ void SceneBasic_Uniform::initScene()
     seaMesh = ObjMesh::load("resources/models/sea.obj");
     seaTexture = LoadTexture("resources/textures/sea.png");
     seaTexture2 = LoadTexture("resources/textures/seaoverlay.png");
+    sea.Transformation = mat4(1.0f);
     sea.Transformation = glm::rotate(sea.Transformation, glm::radians(180.0f), vec3(0.0f, 0.0f, 0.0f));
     sea.Transformation = glm::scale(mat4(1.0f), vec3(40.0f, 1.0f, 40.0f));
 
@@ -138,7 +139,43 @@ void SceneBasic_Uniform::initScene()
 
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
+    // depth map for shadowmap
+    glGenFramebuffers(1, &DepthMapFramebuffer);
+    glGenTextures(1, &DepthMapFramebufferTexture);
+    //glGenRenderbuffers(1, &DepthMapRenderbuffer);
+
+    GLfloat BorderColor[] = {1.0, 1.0, 1.0, 1.0};
+
+    glBindTexture(GL_TEXTURE_2D, DepthMapFramebufferTexture);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, 1024, 1024, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+    glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, BorderColor);
+
+    glBindFramebuffer(GL_FRAMEBUFFER, DepthMapFramebuffer);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, DepthMapFramebufferTexture, 0);
+    glDrawBuffer(GL_NONE);
+    glReadBuffer(GL_NONE);
+
+    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+        cout << "Frame buffer not complete";
+        exit(EXIT_FAILURE);
+    }
+
+    //glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, 1024, 1024);
+    //glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, DepthMapRenderbuffer);
+
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
     FramebufferDisplay = FrameRectangle();
+
+    prog.use();
+    prog.setUniform("skybox", 0); // i found that explicit linking is required on nvidia opengl api, but seems to work without on intel
+    prog.setUniform("Texture", 1);
+    prog.setUniform("Texture2", 2);
+    prog.setUniform("DepthMap", 3);
 
     gaussian.use();
     gaussian.setUniform("ScreenTexture", 0);
@@ -147,11 +184,14 @@ void SceneBasic_Uniform::initScene()
     bloom.setUniform("ScreenTexture", 0);
     bloom.setUniform("BaseTexture", 1);
 
+    depth.use();
+    depth.setUniform("DepthMap", 0);
+
     glEnable(GL_DEPTH_TEST);
     //glDepthFunc(GL_LESS);
 
-    GameSession.LoadEntries();
-    GameSession.SaveEntry(23023);
+    //GameSession.LoadEntries(); for debugging
+    //GameSession.SaveEntry(23023);
 }
 
 void SceneBasic_Uniform::compile() // Provided by labs
@@ -173,11 +213,17 @@ void SceneBasic_Uniform::compile() // Provided by labs
         base.compileShader("resources/shaders/base.vert");
         base.compileShader("resources/shaders/base.frag");
         base.link();
+
+        depth.compileShader("resources/shaders/depth.vert");
+        //depth.compileShader("resources/shaders/depth.frag");
+        depth.link();
     }
     catch (GLSLProgramException& e) {
         cerr << e.what() << endl;
         exit(EXIT_FAILURE);
     }
+
+
 }
 
 void SceneBasic_Uniform::update(float t)
@@ -197,48 +243,15 @@ void Blur(int Intensity, GLSLProgram& shader, int StartBuffer) {
     }
 }
 
-void SceneBasic_Uniform::render() // Render loop
-{
+void RenderScene(GLSLProgram& prog) {
 
-    prog.use(); // return original shader as gltext changes it
-    glBindFramebuffer(GL_FRAMEBUFFER, Framebuffers[SceneBuffer]);
-    glEnable(GL_DEPTH_TEST);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // Scene clearing/refreshing
-
-    //Timing
-    float currentFrame = glfwGetTime();
-    deltaTime = currentFrame - lastFrame;
-    lastFrame = currentFrame;
-
-    //Camera
-    boat.Update(deltaTime); // Delta time is used to not have abnormal movement depending on frame time
-
-    prog.setUniform("BlurStrength", BlurIntensity);
-
-    //Others
-    prog.setUniform("ModelIn", mat4(1.0f));
-    prog.setUniform("MixEnabled", false); // Disable texture mixing to not cause issues 
-
-    CameraData CamData = boat.GetCameraData(deltaTime);
-
-    prog.setUniform("CameraPos", CamData.CameraPosition); // Send camera position for lighting calculations
-    prog.setUniform("ViewIn", CamData.ViewMatrix); // Send MVP base to shader, but leave models to be set per model
-    prog.setUniform("ProjectionIn", boat.Projection);
-
-    //Skybox
-    glDisable(GL_DEPTH_TEST);
-    prog.setUniform("SkyboxActive", true); // Fragment shader setting to skybox
-    glBindVertexArray(skybox.Data.VAO);
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_CUBE_MAP, skybox.Data.TextureID);
-    glDrawArrays(GL_TRIANGLES, 0, skybox.Data.ArraySize);
-    glEnable(GL_DEPTH_TEST);
-    prog.setUniform("SkyboxActive", false);
 
     // Boat render
     prog.setUniform("ModelIn", boat.GetBoatMatrix());
     glActiveTexture(GL_TEXTURE1);
     glBindTexture(GL_TEXTURE_2D, boatTexture);
+    glActiveTexture(GL_TEXTURE3);
+    glBindTexture(GL_TEXTURE_2D, DepthMapFramebufferTexture);
     boatMesh->render();
 
     // Sea
@@ -249,6 +262,8 @@ void SceneBasic_Uniform::render() // Render loop
     glBindTexture(GL_TEXTURE_2D, seaTexture);
     glActiveTexture(GL_TEXTURE2); // Overlay texture
     glBindTexture(GL_TEXTURE_2D, seaTexture2);
+    glActiveTexture(GL_TEXTURE3);
+    glBindTexture(GL_TEXTURE_2D, DepthMapFramebufferTexture);
     seaMesh->render();
     prog.setUniform("MixEnabled", false);
 
@@ -265,42 +280,126 @@ void SceneBasic_Uniform::render() // Render loop
         NodeBase = glm::rotate(NodeBase, glm::radians(RotationDeg), vec3(0.0f, 1.0f, 0.0f));
         glActiveTexture(GL_TEXTURE1); // First texture
         glBindTexture(GL_TEXTURE_2D, (i == 0) ? GameSession.NodeNextTexture : GameSession.NodeTexture);
+        glActiveTexture(GL_TEXTURE3);
+        glBindTexture(GL_TEXTURE_2D, DepthMapFramebufferTexture);
         prog.setUniform("ModelIn", NodeBase);
         GameSession.NodeModel->render();
     }
+}
+
+void SceneBasic_Uniform::render() // Render loop
+{
+    prog.use(); // return original shader as gltext changes it
+    glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
+    glEnable(GL_DEPTH_TEST);
+
+    // ## TIMING ##
+    float currentFrame = glfwGetTime();
+    deltaTime = currentFrame - lastFrame;
+    lastFrame = currentFrame;
+
+    // ## CAMERA AND UNIFORMS ##
+    boat.Update(deltaTime); // Delta time is used to not have abnormal movement depending on frame time
+    prog.setUniform("BlurStrength", BlurIntensity);
+    prog.setUniform("ModelIn", mat4(1.0f));
+    prog.setUniform("MixEnabled", false); // Disable texture mixing to not cause issues 
+    CameraData CamData = boat.GetCameraData(deltaTime);
 
 
-    glDisable(GL_DEPTH_TEST);
+    // ## SHADOWMAP RENDER ##
+    depth.use();
+    glBindFramebuffer(GL_FRAMEBUFFER, DepthMapFramebuffer);
+    glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
 
-    bloom.use();
-    bloom.setUniform("Mix", false);
-    glBindFramebuffer(GL_FRAMEBUFFER, Framebuffers[BloomBuffer]);
-    glBindVertexArray(FramebufferDisplay.VAO);
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, FramebufferTextures[SceneBuffer]);
-    glDrawArrays(GL_TRIANGLES, 0, 6);
+    glViewport(0, 0, 1024, 1024);
+    glm::mat4 LightProj = glm::ortho(-7.0f, 7.0f, -7.0f, 7.0f, -12.0f, 12.0f);
+    glm::vec3 NewLightPos = boat.GetBoatPosition() + (glm::normalize(LightPosition) * 0.3f);
+    glm::mat4 LightView = glm::lookAt(NewLightPos, boat.GetBoatPosition() - glm::vec3(0.5f,0.0f,0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 
-    gaussian.use();
-    Blur(6, gaussian, BloomBuffer);
+    depth.setUniform("LightMatrix", LightProj * LightView); // Send MVP base to shader, but leave models to be set per model
+    
+    glEnable(GL_CULL_FACE);
+    glCullFace(GL_FRONT);
+    RenderScene(depth);
+    glCullFace(GL_BACK);
+    glDisable(GL_CULL_FACE);
 
-    bloom.use();
-    bloom.setUniform("Mix", true);
-    glBindFramebuffer(GL_FRAMEBUFFER, Framebuffers[SceneBuffer]);
-    glBindVertexArray(FramebufferDisplay.VAO);
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, FramebufferTextures[BloomBuffer]);
-    glActiveTexture(GL_TEXTURE1);
-    glBindTexture(GL_TEXTURE_2D, FramebufferTextures[SceneBuffer]);
-    glDrawArrays(GL_TRIANGLES, 0, 6);
+    // ## MAIN RENDER ##
 
-    base.use();
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
-    glBindVertexArray(FramebufferDisplay.VAO);
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, FramebufferTextures[BloomDebug == true ? BloomBuffer : SceneBuffer]);
-    glDrawArrays(GL_TRIANGLES, 0, 6);
+    if (!DepthDebug) {
+        prog.use();
 
-    glBindVertexArray(0);
+        glViewport(0, 0, width, height);
+        prog.setUniform("CameraPos", CamData.CameraPosition); // Send camera position for lighting calculations
+        prog.setUniform("ViewIn", CamData.ViewMatrix); // Send MVP base to shader, but leave models to be set per model
+        prog.setUniform("ProjectionIn", boat.Projection);
+
+        glBindFramebuffer(GL_FRAMEBUFFER, Framebuffers[SceneBuffer]);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+        // Skybox - Separated to avoid shadowmap collisions
+        if (SkyboxEnabled) {
+            glDisable(GL_DEPTH_TEST);
+            prog.setUniform("SkyboxActive", true); // Fragment shader setting to skybox
+            glBindVertexArray(skybox.Data.VAO);
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_CUBE_MAP, skybox.Data.TextureID);
+            glDrawArrays(GL_TRIANGLES, 0, skybox.Data.ArraySize);
+            glEnable(GL_DEPTH_TEST);
+            prog.setUniform("SkyboxActive", false);
+        }
+
+        glActiveTexture(GL_TEXTURE3);
+        glBindTexture(GL_TEXTURE_2D, DepthMapFramebufferTexture);
+        prog.setUniform("LightMatrix", LightProj * LightView);
+
+        RenderScene(prog);
+
+        // ## POST PROCESSING ##
+        glDisable(GL_DEPTH_TEST);
+
+
+        bloom.use();
+        bloom.setUniform("Mix", false);
+        glBindFramebuffer(GL_FRAMEBUFFER, Framebuffers[BloomBuffer]);
+        glBindVertexArray(FramebufferDisplay.VAO);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, FramebufferTextures[SceneBuffer]);
+        glDrawArrays(GL_TRIANGLES, 0, 6);
+
+        gaussian.use();
+        Blur(6, gaussian, BloomBuffer);
+
+        bloom.use();
+        bloom.setUniform("Mix", true);
+        glBindFramebuffer(GL_FRAMEBUFFER, Framebuffers[SceneBuffer]);
+        glBindVertexArray(FramebufferDisplay.VAO);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, FramebufferTextures[BloomBuffer]);
+        glActiveTexture(GL_TEXTURE1);
+        glBindTexture(GL_TEXTURE_2D, FramebufferTextures[SceneBuffer]);
+        glDrawArrays(GL_TRIANGLES, 0, 6);
+
+        base.use();
+        base.setUniform("DepthMode", false);
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        glBindVertexArray(FramebufferDisplay.VAO);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, FramebufferTextures[BloomDebug == true ? BloomBuffer : SceneBuffer]);
+        glDrawArrays(GL_TRIANGLES, 0, 6);
+    } else {
+        base.use();
+        base.setUniform("DepthMode", true);
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        glBindVertexArray(FramebufferDisplay.VAO);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, DepthMapFramebufferTexture);
+        glDrawArrays(GL_TRIANGLES, 0, 6);
+        glBindVertexArray(0);
+    }
+    
+
+
 
 
     /*gltSetText(Timer, "Hello World!");

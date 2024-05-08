@@ -178,6 +178,7 @@
     <None Include="resources\shaders\base.vert" />
     <None Include="resources\shaders\bloom.frag" />
     <None Include="resources\shaders\bloom.vert" />
+    <None Include="resources\shaders\depth.vert" />
     <None Include="resources\shaders\gaussian.frag" />
     <None Include="resources\shaders\gaussian.vert" />
     <None Include="resources\shaders\shader.frag">

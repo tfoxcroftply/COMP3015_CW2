@@ -26,6 +26,7 @@ private:
     GLSLProgram gaussian;
     GLSLProgram bloom;
     GLSLProgram base;
+    GLSLProgram depth;
 
     float angle;
 
@@ -37,7 +38,7 @@ private:
     const float FogEndDist = 50.0f;
     const float HazeStrength = 0.07f; // Sort of like a scene tint
     const glm::vec3 HazeColor = glm::vec3(0.9f, 1.0f, 1.0f); // very slightly blue
-    const glm::vec3 LightPosition = glm::vec3(6999.0f, 6999.0f, -9999.0f);
+    const glm::vec3 LightPosition = glm::vec3(1000.0f, 1000.0f, -1000.0f);
     const glm::vec3 LightColor = glm::vec3(0.7f, 0.7f, 0.7f);
 
     const float Brightness = 1.0f;
@@ -54,6 +55,8 @@ private:
 
     bool BloomDebug = false;
     bool MovementEnabled = true;
+    bool SkyboxEnabled = true;
+    bool DepthDebug = false;
 
     void compile();
 

@@ -5,12 +5,15 @@ in vec3 SkyboxCoords;
 in vec3 Color;
 in vec3 Normal;
 in vec3 FragPosition;
+in vec4 FragPositionLightSpace;
 out vec4 FragColor;
 
 uniform bool SkyboxActive;
+
 uniform samplerCube skybox;
 uniform sampler2D Texture;
 uniform sampler2D Texture2;
+uniform sampler2D DepthMap;
 
 uniform bool MixEnabled;
 uniform vec3 FogColor;
@@ -25,6 +28,23 @@ uniform float SetReflection;
 uniform float BlurStrength;
 
 uniform vec3 CameraPos;
+
+float ShadowCalc(vec4 TempFragPosLightSpace, vec3 LightDirection) {
+    vec3 Coordinates = TempFragPosLightSpace.xyz / TempFragPosLightSpace.w;
+    Coordinates = Coordinates * 0.5 + 0.5;
+    float ClosestDepth = texture(DepthMap, Coordinates.xy).r; 
+    float CurrentDepth = Coordinates.z;
+    
+    if (CurrentDepth < 0.0 || CurrentDepth > 1.0) {
+        return 0.0;
+    }
+
+    float Bias = max(0.002 * (1.0 - dot(normalize(Normal), normalize(LightDirection))), 0.0001);
+
+    float ShadowValue = (CurrentDepth - Bias) > ClosestDepth ? 1.0 : 0.0;
+
+    return ShadowValue;
+}
 
 void main() {
     if (SkyboxActive) {
@@ -50,8 +70,9 @@ void main() {
         float Diffuse = max(dot(Normal2, LightDirection), 0.0);
         vec3 MixedDiffuse = Diffuse * LightColor;
         float SpecularShine = pow(max(dot(CameraDirection, ReflectionDirection), 0.0), 80); // calculations created with help from learnopengl
-        vec3 Specular = 1.0f * SpecularShine * LightColor;  
-        vec3 Stage1 = (Ambient + MixedDiffuse + Specular) * NewTexture; // phong output
+        vec3 Specular = 1.0f * SpecularShine * LightColor;
+        float Shadow = ShadowCalc(FragPositionLightSpace, LightDirection);
+        vec3 Stage1 = (Ambient + (1.0 - Shadow) * (MixedDiffuse + Specular)) * NewTexture; // phong output
 
         //Reflection - stage 2
         vec3 CameraDirection2 = normalize(CameraPos - FragPosition);

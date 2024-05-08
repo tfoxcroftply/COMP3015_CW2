@@ -9,11 +9,13 @@ out vec2 TexCoords;
 out vec3 Color;
 out vec3 Normal;
 out vec3 FragPosition;
+out vec4 FragPositionLightSpace;
 
 uniform mat4 ModelIn;
 uniform mat4 ViewIn;
 uniform mat4 ProjectionIn;
 uniform bool SkyboxActive;
+uniform mat4 LightMatrix;
 
 void main() {
     if (!SkyboxActive) {
@@ -21,6 +23,9 @@ void main() {
         Normal = mat3(transpose(inverse(ModelIn))) * VertexNormal; 
         FragPosition = vec3(ModelIn * vec4(VertexPosition, 1.0));
         TexCoords = VertexTexCoords;
+
+        vec4 WorldPos = ModelIn * vec4(VertexPosition, 1.0);
+        FragPositionLightSpace = LightMatrix * WorldPos;
         gl_Position = ProjectionIn * ViewIn * ModelIn * vec4(VertexPosition, 1.0);
     } else {
         SkyboxCoords = VertexPosition;
