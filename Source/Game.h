@@ -1,5 +1,6 @@
 
 #include "helper/objmesh.h"
+#include "LevelData.h"
 
 #include <fstream>
 #include <iostream>
@@ -14,67 +15,76 @@ struct GameData {
 };
 
 
+
 class Game {
 private:
 	float DetectionDistance = 0.5f;
 	float NodeHeight = 0.25f;
 	int MaxNodesVisible = 5;
-	int NodeMapScale = 3.0f;
 
-int CurrentCheckpoint = 0;
-bool Finished = false;
-std::vector<glm::vec2> NodePositionVectors = {};
-std::vector<float> NodePositions = {
-	-1.0f,-1.0f,
-	-2.0f,-2.0f,
-	-3.0f,-5.0f,
-	-6.0f,-5.0f,
-	-6.0f,-2.0f,
-	-4.0f,0.0f,
-	-3.0f,3.0f,
-	-1.0f,2.0f,
-	-1.0f,-1.0f,
-	1.0f,-3.0f,
-	3.0f,-3.0f,
-	5.0f,-2.0f,
-	6.0f,-4.0f,
-	4.0f,-6.0f,
-	1.0f,-4.0f,
-	5.0f,0.0f,
-	5.0f,5.0f,
-	2.0f,5.0f,
-	-3.0f,7.0f,
-	-5.0f,5.0f,
-	-2.0f,4.0f,
-	2.0f,3.0f,
-	2.0f,1.0f,
-	0.0f,0.0f
-};
+	bool Finished = false;
+	Boat boat;
+
+	std::vector<Level> Levels;
+	bool FirstLevel = true;
+
+	glm::vec3 Convert(glm::vec2 Input) {
+		return glm::vec3(Input.x, NodeHeight, Input.y);
+	}
+
+	std::vector<glm::vec3> ConvertVector(std::vector<glm::vec2> Input) {
+		std::vector<glm::vec3> Collected;
+		for (unsigned int i = 0; i < Input.size(); i++) {
+			Collected.push_back(glm::vec3(Input[i].x, NodeHeight, Input[i].y));
+		}
+		return Collected;
+	}
 
 public:
+	Game() {};
 	std::unique_ptr<ObjMesh> NodeModel;
 	unsigned int NodeTexture;
 	unsigned int NodeNextTexture;
+	unsigned int ActiveLevel = 0;
+	glm::vec3 RequestedBoatPos = glm::vec3(0.0f, 0.0f, 0.0f);
 
 	bool Init() {
+		std::vector<Level> NewLevels = GenerateLevels();
 
-		if (NodePositions.size() % 2 != 0) {
-			std::cout << "Node positions need to be in pairs.";
-			return false;
+		for (unsigned int i = 0; i < NewLevels.size(); i++) {
+			Levels.push_back(NewLevels[i]);
 		}
-		else {
-			for (unsigned int i = 0; i < NodePositions.size(); i += 2) {
-				glm::vec2 NewNode = glm::vec2(NodePositions[i] * NodeMapScale, NodePositions[i + 1] * NodeMapScale);
-				NodePositionVectors.push_back(NewNode);
-			}
+
+		if (Levels.size() == 0) {
+			std::cout << "No levels were generated.";
+			return false;
 		}
 
 		NodeModel = ObjMesh::load("resources/models/node.obj");
 		NodeTexture = LoadTexture("resources/textures/node.png");
 		NodeNextTexture = LoadTexture("resources/textures/nodenext.png");
 
+		LevelUpdate();
+
 		if (NodeModel != nullptr && NodeTexture != -1) {
 			return true;
+		}
+
+	}
+
+	void LevelUpdate() {
+		if (!Finished) {
+			if (ActiveLevel < Levels.size()) {
+				if (FirstLevel) {
+					FirstLevel = false;
+				} else {
+					ActiveLevel += 1;
+				}
+				RequestedBoatPos = Convert(Levels[ActiveLevel].GetStart());
+			} else {
+				Finished = true;
+				return;
+			}
 		}
 	}
 
@@ -83,31 +93,25 @@ public:
 	}
 
 	std::vector<glm::vec3> GetActiveNodes() {
-		if (CurrentCheckpoint < NodePositionVectors.size()) {
-			std::vector<glm::vec3> Temp;
-			for (unsigned int i = CurrentCheckpoint; i < NodePositionVectors.size(); i++) {
-				if (i >= CurrentCheckpoint + MaxNodesVisible) {
-					break;
-				}
-				Temp.push_back(glm::vec3(NodePositionVectors[i].x, NodeHeight, NodePositionVectors[i].y));
-			}
-			return Temp;
-		}
+		return ConvertVector(Levels[ActiveLevel].GetActiveNodes());
 	}
 
 	void UpdatePlayerPosition(glm::vec3 Input) {
-		if (!Finished) {
-			glm::vec2 NewPosition = glm::vec2(Input.x, Input.z);
-			glm::vec2 SelectedNode = NodePositionVectors[CurrentCheckpoint];
-			if (glm::distance(NewPosition, SelectedNode) < DetectionDistance) {
-				std::cout << "Checkpoint update!";
-				CurrentCheckpoint++;
-			}
-			if (CurrentCheckpoint == NodePositionVectors.size()) {
-				Finished = true;
-			}
-		}
+		//if (!Finished) {
+		//	glm::vec2 NewPosition = glm::vec2(Input.x, Input.z);
+			//glm::vec2 SelectedNode = NodePositionVectors[CurrentCheckpoint];
+			//if (glm::distance(NewPosition, SelectedNode) < DetectionDistance) {
+			//	std::cout << "Checkpoint update!";
+			//	CurrentCheckpoint++;
+			//}
+		//	if (CurrentCheckpoint == NodePositionVectors.size()) {
+		//		Finished = true;
+		//	}
+		//}
 	}
+
+
+
 
 	// data storage
 	GameData LoadEntries() {

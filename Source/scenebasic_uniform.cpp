@@ -97,12 +97,14 @@ void SceneBasic_Uniform::initScene()
     sea.Transformation = glm::rotate(sea.Transformation, glm::radians(180.0f), vec3(0.0f, 0.0f, 0.0f));
     sea.Transformation = glm::scale(mat4(1.0f), vec3(40.0f, 1.0f, 40.0f));
 
+    boat.Init();
+
     if (!GameSession.Init()) {
         cout << "Game loading encountered an error.";
         exit(0);
     }                   
 
-    boat.Init();
+
 
     gltInit();
     Timer = gltCreateText();
@@ -299,6 +301,15 @@ void SceneBasic_Uniform::render() // Render loop
     lastFrame = currentFrame;
 
     // ## CAMERA AND UNIFORMS ##
+
+    if (GameSession.RequestedBoatPos != glm::vec3(0.0f, 0.0f, 0.0f)) {
+        glm::vec3 Pos = GameSession.RequestedBoatPos;
+        boat.BoatMatrix[3][0] = Pos.x;
+        boat.BoatMatrix[3][2] = Pos.z;
+        std::cout << "Move";
+        GameSession.RequestedBoatPos = glm::vec3(0.0f, 0.0f, 0.0f);
+    }
+
     boat.Update(deltaTime); // Delta time is used to not have abnormal movement depending on frame time
     prog.setUniform("BlurStrength", BlurIntensity);
     prog.setUniform("ModelIn", mat4(1.0f));

@@ -127,5 +127,8 @@
     <ClInclude Include="gltext.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="LevelData.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

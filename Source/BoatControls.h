@@ -16,15 +16,9 @@
 #include <ctime>
 
 float Clamp(float value, float min, float max) {
-	if (value < min) {
-		return min;
-	}
-	else if (value > max) {
-		return max;
-	}
-	else {
-		return value;
-	}
+	if (value < min) { return min; }
+	if (value > max) { return max; }
+	return value;
 }
 
 float Lerp(float Start, float End, float Strength) { // not sure what to call it for normal numbers so it is just named as lerp
@@ -85,11 +79,12 @@ private:
 	glm::vec3 Up = glm::vec3(0.0f, 1.0f, 0.0f);
 	glm::vec3 Front = glm::vec3(0.0f, 0.0f, -1.0f);
 
-	glm::mat4 BoatMatrix = glm::mat4(1.0f);
+
 	glm::mat4 BoatMatrixPreWobble = glm::mat4(1.0f);
 public:
 	glm::vec3 Position = glm::vec3(-5.0f, 0.5f, 0.0f);
 	glm::mat4 Projection;
+	glm::mat4 BoatMatrix = glm::mat4(1.0f);
 	GLFWwindow* Window;
 
 	Boat() {};
