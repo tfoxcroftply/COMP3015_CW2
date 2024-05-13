@@ -47,9 +47,9 @@ ModelData FramebufferDisplay;
 
 SceneBasic_Uniform::SceneBasic_Uniform() : angle(0.0f) {}
 
-//void mouse_callback(GLFWwindow* Window, double X, double Y) {
-  //  camera.MouseInput(X, Y); // Send data to the camera for processing
-//}
+void mouse_callback(GLFWwindow* Window, double X, double Y) { 
+    boat.UpdateMouse(X, Y); // Send data to the camera for processing
+}
 
 void SceneBasic_Uniform::initScene()
 {
@@ -60,7 +60,7 @@ void SceneBasic_Uniform::initScene()
     mainWindow = glfwGetCurrentContext(); // Get the window location. Had to be called here since the lab libraries didn't seem to set it anywhere.
     boat.Window = mainWindow;
 
-    //glfwSetCursorPosCallback(mainWindow, mouse_callback); // Define mouse callback function
+    glfwSetCursorPosCallback(mainWindow, mouse_callback); // Define mouse callback function
     glfwSetInputMode(mainWindow, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
 

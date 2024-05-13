@@ -27,6 +27,10 @@ float Clamp(float value, float min, float max) {
 	}
 }
 
+float Lerp(float Start, float End, float Strength) { // not sure what to call it for normal numbers so it is just named as lerp
+	return Start + (End - Start) * Strength;
+}
+
 int CurrentTime() {
 	unsigned int Tick = std::chrono::system_clock::now().time_since_epoch() / std::chrono::milliseconds(1);
 	return Tick;
@@ -66,6 +70,17 @@ private:
 	float SteerWobbleLeft = 0.0f;
 	float SteerWobbleRight = 0.0f;
 	float LastWobble = 0.0f;
+
+	int LastMouseX = -1;
+	int LastMouseY = -1;
+	float Yaw = 0;
+	float Pitch = 0;
+	float LastYaw = 0;
+	float LastPitch = 0;
+	float AimRetractionStrength = 2.0f;
+	float LastMoveTick = 0.0f;
+	float RetractionDelay = 1.0f;
+	float MouseSensitivity = 0.03f;
 
 	glm::vec3 Up = glm::vec3(0.0f, 1.0f, 0.0f);
 	glm::vec3 Front = glm::vec3(0.0f, 0.0f, -1.0f);
@@ -123,6 +138,30 @@ public:
 		}
 	}
 
+	void UpdateMouse(double X, double Y) {
+		if (LastMouseX == -1 or LastMouseY == -1) {
+			LastMouseX = X;
+			LastMouseY = Y;
+			return;
+		}
+
+		float XChange = X - LastMouseX;
+		float YChange = Y - LastMouseY;
+
+		XChange *= MouseSensitivity;
+		YChange *= MouseSensitivity;
+
+		Yaw = Clamp(Yaw + float(XChange),-60.0f,60.0f);
+		Pitch = Clamp(Pitch + float(YChange), -10.0f, 20.0f);
+
+		LastMouseX = X;
+		LastMouseY = Y;
+
+		LastMoveTick = CurrentTime();
+
+		std::cout << Yaw;
+	}
+
 	void Init() {
 		BoatMatrix = glm::scale(BoatMatrix, glm::vec3(BoatScale));
 		BoatMatrix = glm::rotate(BoatMatrix, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
@@ -143,8 +182,17 @@ public:
 	CameraData GetCameraData(float Delta) {
 		float InverseScale = 1.0f / BoatScale; // get inverse of boat scale for reverting
 
+		if (CurrentTime() > (RetractionDelay * 1000) + LastMoveTick) {
+			Yaw = Lerp(Yaw, 0.0f, AimRetractionStrength * Delta);
+			//Pitch = Lerp(Pitch, 0.0f, AimRetractionStrength * Delta);
+		}
+
 		glm::mat4 NewMatrix = BoatMatrix;
 		NewMatrix = glm::rotate(NewMatrix, glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f)); // returns back to original state
+
+		//NewMatrix = glm::rotate(NewMatrix, glm::radians(-Pitch), glm::vec3(1.0f, 0.0f, 0.0f));
+		NewMatrix = glm::rotate(NewMatrix, glm::radians(-Yaw), glm::vec3(0.0f, 1.0f, 0.0f));
+
 		NewMatrix = glm::scale(NewMatrix, glm::vec3(InverseScale)); // return to normal size
 
 		glm::vec3 BoatPosition = glm::vec3(NewMatrix[3]); // extract position from boat matrix
