@@ -154,7 +154,6 @@ public:
 
 		LastMoveTick = CurrentTime();
 
-		std::cout << Yaw;
 	}
 
 	void Init() {

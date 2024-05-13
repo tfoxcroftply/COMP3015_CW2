@@ -80,7 +80,9 @@ public:
 				} else {
 					ActiveLevel += 1;
 				}
-				RequestedBoatPos = Convert(Levels[ActiveLevel].GetStart());
+				if (ActiveLevel < Levels.size()) {
+					RequestedBoatPos = Convert(Levels[ActiveLevel].GetStart());
+				}
 			} else {
 				Finished = true;
 				return;
@@ -93,21 +95,24 @@ public:
 	}
 
 	std::vector<glm::vec3> GetActiveNodes() {
-		return ConvertVector(Levels[ActiveLevel].GetActiveNodes());
+		std::vector<glm::vec2> NewNodes = Levels[ActiveLevel].GetActiveNodes();
+		if (NewNodes.size() > 0) {
+			return ConvertVector(NewNodes);
+		}
 	}
 
 	void UpdatePlayerPosition(glm::vec3 Input) {
-		//if (!Finished) {
-		//	glm::vec2 NewPosition = glm::vec2(Input.x, Input.z);
-			//glm::vec2 SelectedNode = NodePositionVectors[CurrentCheckpoint];
-			//if (glm::distance(NewPosition, SelectedNode) < DetectionDistance) {
-			//	std::cout << "Checkpoint update!";
-			//	CurrentCheckpoint++;
-			//}
-		//	if (CurrentCheckpoint == NodePositionVectors.size()) {
-		//		Finished = true;
-		//	}
-		//}
+		if (!Finished) {
+			glm::vec2 NewPosition = glm::vec2(Input.x, Input.z);
+			std::vector<glm::vec2> NewNodes = Levels[ActiveLevel].GetActiveNodes();
+			if (NewNodes.size() > 0) {
+				if (glm::distance(NewPosition, NewNodes[0]) < DetectionDistance) {
+					Levels[ActiveLevel].CurrentCheckpoint++;
+				}
+			} else {
+				LevelUpdate(); // backup
+			}
+		}
 	}
 
 

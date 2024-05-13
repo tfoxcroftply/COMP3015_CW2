@@ -15,6 +15,7 @@ private:
 	std::vector<glm::vec2> Nodes;
 	std::vector<glm::vec2> Boosts;
 public:
+	unsigned int CurrentCheckpoint = 0;
 	Level() {};
 	Level(unsigned int _Id, glm::vec2 _Start, std::vector<glm::vec2> _Nodes, std::vector<glm::vec2> _Boosts) {
 		Id = _Id;
@@ -42,8 +43,18 @@ public:
 	}
 	std::vector<glm::vec2> GetActiveNodes() {
 		std::vector<glm::vec2> Collected = {};
-		for (unsigned int i = 0; i < Nodes.size(); i++) {
-			Collected.push_back(Nodes[i]);
+		if (CurrentCheckpoint < Nodes.size()) {
+			for (unsigned int i = CurrentCheckpoint; i < Nodes.size(); i++) {
+				Collected.push_back(Nodes[i]);
+			}
+		}
+		return Collected;
+	}
+
+	std::vector<glm::vec2> GetNextNode() {
+		std::vector<glm::vec2> Collected; // so we can tell if it is empty
+		if (Nodes.size() > 0) {
+			Collected.push_back(Nodes[0]);
 		}
 		return Collected;
 	}
