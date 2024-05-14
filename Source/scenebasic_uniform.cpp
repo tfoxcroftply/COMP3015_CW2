@@ -304,8 +304,7 @@ void SceneBasic_Uniform::render() // Render loop
 
     if (GameSession.RequestedBoatPos != glm::vec3(0.0f, 0.0f, 0.0f)) {
         glm::vec3 Pos = GameSession.RequestedBoatPos;
-        boat.BoatMatrix[3][0] = Pos.x;
-        boat.BoatMatrix[3][2] = Pos.z;
+        boat.SetPosition(Pos);
         std::cout << "Move";
         GameSession.RequestedBoatPos = glm::vec3(0.0f, 0.0f, 0.0f);
     }
@@ -391,6 +390,14 @@ void SceneBasic_Uniform::render() // Render loop
         glBindTexture(GL_TEXTURE_2D, FramebufferTextures[SceneBuffer]);
         glDrawArrays(GL_TRIANGLES, 0, 6);
 
+
+        int Cycles = boat.GetBlurCycles();
+        if (Cycles > 0 or GameSession.IsFinished()) {
+            gaussian.use();
+            Blur(8, gaussian, SceneBuffer);
+        }
+
+
         base.use();
         base.setUniform("DepthMode", false);
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -406,18 +413,41 @@ void SceneBasic_Uniform::render() // Render loop
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, DepthMapFramebufferTexture);
         glDrawArrays(GL_TRIANGLES, 0, 6);
-        glBindVertexArray(0);
+
     }
     
+    glBindVertexArray(0);
+
+    if (GameSession.MenuOption == "Start") {
+        gltSetText(Timer, "Find the first checkpoint to begin the game!");
+        gltBeginDraw();
+        gltColor(1.0f, 1.0f, 1.0f, 1.0f);
+        gltDrawText2DAligned(Timer, this->width / 2, this->height - 50, 1.5f, GLT_CENTER, GLT_BOTTOM);
+        gltEndDraw();
+    } else if (GameSession.MenuOption == "Running") {
+
+        gltSetText(Timer, "Nodes: " + GameSession.ActiveLevel + "/5");
+        gltBeginDraw();
+        gltColor(1.0f, 1.0f, 1.0f, 1.0f);
+        gltDrawText2DAligned(Timer, this->width - 5, this->height - 65, 1.5f, GLT_RIGHT, GLT_BOTTOM);
+        gltEndDraw();
+
+        gltSetText(Timer, "Level: 1/5");
+        gltBeginDraw();
+        gltColor(1.0f, 1.0f, 1.0f, 1.0f);
+        gltDrawText2DAligned(Timer, this->width - 5, this->height - 35, 1.5f, GLT_RIGHT, GLT_BOTTOM);
+        gltEndDraw();
+
+        gltSetText(Timer, "Time: ");
+        gltBeginDraw();
+        gltColor(1.0f, 1.0f, 1.0f, 1.0f);
+        gltDrawText2DAligned(Timer, this->width - 5, this->height - 5, 1.5f, GLT_RIGHT, GLT_BOTTOM);
+        gltEndDraw();
 
 
+    }
 
 
-    /*gltSetText(Timer, "Hello World!");
-    //gltBeginDraw();
-    //gltColor(1.0f, 1.0f, 1.0f, 1.0f);
-    //gltDrawText2DAligned(Timer, this->width / 2, this->height - 50, 1.5f, GLT_CENTER, GLT_BOTTOM);
-    //gltEndDraw(); */
 
     //glBindVertexArray(0);
 

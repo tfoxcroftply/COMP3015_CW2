@@ -46,6 +46,7 @@ public:
 	unsigned int NodeTexture;
 	unsigned int NodeNextTexture;
 	unsigned int ActiveLevel = 0;
+	std::string MenuOption = "Start";
 	glm::vec3 RequestedBoatPos = glm::vec3(0.0f, 0.0f, 0.0f);
 
 	bool Init() {
@@ -74,18 +75,22 @@ public:
 
 	void LevelUpdate() {
 		if (!Finished) {
-			if (ActiveLevel < Levels.size()) {
-				if (FirstLevel) {
-					FirstLevel = false;
-				} else {
-					ActiveLevel += 1;
-				}
-				if (ActiveLevel < Levels.size()) {
-					RequestedBoatPos = Convert(Levels[ActiveLevel].GetStart());
-				}
+			if (FirstLevel) {
+				FirstLevel = false;
+				return;
+			}
+
+			if (ActiveLevel + 1 < Levels.size()) {
+				ActiveLevel++;
+				std::cout << "Move boat";
+				RequestedBoatPos = Convert(Levels[ActiveLevel].GetStart());
 			} else {
 				Finished = true;
-				return;
+			}
+
+
+			if (ActiveLevel > 0) {
+				MenuOption = "Running";
 			}
 		}
 	}
@@ -95,10 +100,15 @@ public:
 	}
 
 	std::vector<glm::vec3> GetActiveNodes() {
-		std::vector<glm::vec2> NewNodes = Levels[ActiveLevel].GetActiveNodes();
-		if (NewNodes.size() > 0) {
-			return ConvertVector(NewNodes);
+		if (!Finished) {
+			if (ActiveLevel < Levels.size()) {
+				std::vector<glm::vec2> NewNodes = Levels[ActiveLevel].GetActiveNodes();
+				if (NewNodes.size() > 0) {
+					return ConvertVector(NewNodes);
+				}
+			}
 		}
+		return {};
 	}
 
 	void UpdatePlayerPosition(glm::vec3 Input) {

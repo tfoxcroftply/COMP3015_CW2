@@ -37,6 +37,8 @@ struct CameraData {
 
 class Boat {
 private:
+	int LastPendingMove = 0;
+	bool PendingMove = false;
 	float BoatHeight = 0.5f;
 	float BoatSpeed = 1.6f;
 	float SlowDownMultiplier = 0.5f;
@@ -171,6 +173,21 @@ public:
 	
 	glm::vec3 GetBoatPosition() {
 		return GetPositionFromMatrix(BoatMatrix);
+	}
+
+	int GetBlurCycles() {
+		if (CurrentTime() < LastPendingMove + 1000) {
+			return 8;
+		}
+		return 0;
+	}
+
+	void SetPosition(glm::vec3 Input) {
+		LastPendingMove = CurrentTime();
+		BoatMatrix[3][0] = Input.x;
+		BoatMatrix[3][2] = Input.z;
+		BoatMatrixPreWobble[3][0] = Input.x;
+		BoatMatrixPreWobble[3][2] = Input.z;
 	}
 
 	CameraData GetCameraData(float Delta) {

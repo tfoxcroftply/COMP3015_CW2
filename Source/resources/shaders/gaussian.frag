@@ -6,7 +6,7 @@ out vec4 FragColor;
 uniform sampler2D ScreenTexture;
 
 uniform bool HorizontalPass = false;
-uniform float Intensity = 0.2f; // sort of like sigma value in gaussian
+uniform float Intensity = 0.189f; // sort of like sigma value in gaussian. found by trial and error and is the least artifacting value. it probably is a result of a missing calculation i dont know about
 
 float Weights[8] = float[](0.942, 0.788, 0.586, 0.386, 0.226, 0.118, 0.054, 0.022); // gaussian values derived from gaussian function
 
