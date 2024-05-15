@@ -7,6 +7,8 @@
 #include <sstream>
 #include <algorithm>
 
+#include <irrKlang.h>
+
 std::string SavePath = "resources/saves/data.txt";
 
 struct GameData {
@@ -58,6 +60,7 @@ public:
 	unsigned int LastNodeTotal = 0;
 	unsigned int LastBoostTime = 0;
 	unsigned int SaveTime = 0;
+	irrklang::ISoundEngine* AudioEngine;
 	std::string MenuOption = "Start";
 	glm::vec3 RequestedBoatPos = glm::vec3(0.0f, 0.0f, 0.0f);
 
@@ -163,6 +166,11 @@ public:
 			std::vector<glm::vec2> NewBoosts = Levels[ActiveLevel].GetActiveBoosts();
 			if (NewNodes.size() > 0) {
 				if (glm::distance(NewPosition, NewNodes[0]) < DetectionDistance) { // for next node, check distance
+					if (NewNodes.size() > 1) {
+						AudioEngine->play2D("resources/sounds/collect.wav");
+					} else {
+						AudioEngine->play2D("resources/sounds/finish.wav");
+					}
 					Levels[ActiveLevel].CurrentCheckpoint++; // if threshold met, set checkpoint
 				}
 			} else {
@@ -172,6 +180,7 @@ public:
 				for (unsigned int i = 0; i < NewBoosts.size(); i++) {
 					if (glm::distance(NewPosition, NewBoosts[i]) < DetectionDistance) { // loop distance check for every visible boost, dont just check with the next one
 						Levels[ActiveLevel].BoostCollect(NewBoosts[i]);
+						AudioEngine->play2D("resources/sounds/boost.wav");
 						LastBoostTime = CurrentTime(); // boost time tracking for speed incrase
 					}
 				}

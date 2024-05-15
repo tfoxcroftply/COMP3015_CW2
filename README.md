@@ -85,14 +85,20 @@ A problem I had with this project was using a single shadowmap. With a single sh
 If I were to make a similar project in the future, perhaps I would add a per-object shadowmap, but to get it implemented in the first place was a huge learning curve.
 ### Future differences
 This project is not as clean as I would like it to be, and for me to be fully satisfied, I would have to rewrite the entire thing. As this project was a learning curve, things were added along the way. This caused some repetitive and otherwise potentially manageable code. 
-
-I would also have liked to implement sounds, however based on difficulties getting my work completed on time, I had to leave this out in order to complete the main features.
+### Bias calculation improvement
+While my program does have bias calculations built in for shadowmap use, it is by no means perfect. If I were to redo the project, I would want to better understand the bias calculations to perfect it.
 
 ## YouTube video
-youtube video here
+https://youtu.be/S_vdtu2Pcu8
 
 ## Credits
-glText (Rendering text) - https://github.com/vallentin/glText
+glText (Text rendering) - https://github.com/vallentin/glText
+irrKlang (Audio engine) - https://www.ambiera.com/irrklang/
+
+Collect sound - https://freesound.org/s/446129/
+Boost sound - https://freesound.org/s/478343/
+Round end sound - https://freesound.org/s/391540/
+
 #### Derived from CW1
-Skybox: https://polyhaven.com/a/qwantani_puresky 
+Skybox: https://polyhaven.com/a/qwantani_puresky
 Model: https://www.thingiverse.com/thing:1752110

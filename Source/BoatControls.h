@@ -14,6 +14,7 @@
 #include <chrono>
 #include <cstdint>
 #include <ctime>
+#include <irrKlang.h>
 
 float Clamp(float value, float min, float max) { // clamps a value between a range
 	if (value < min) { return min; }
@@ -83,7 +84,6 @@ private:
 	glm::vec3 Up = glm::vec3(0.0f, 1.0f, 0.0f);
 	glm::vec3 Front = glm::vec3(0.0f, 0.0f, -1.0f);
 
-
 	glm::mat4 BoatMatrixPreWobble = glm::mat4(1.0f);
 public:
 	float LastBoostTime = 0;
@@ -91,6 +91,8 @@ public:
 	glm::mat4 Projection;
 	glm::mat4 BoatMatrix = glm::mat4(1.0f);
 	GLFWwindow* Window;
+
+	irrklang::ISoundEngine* AudioEngine;
 
 	Boat() {};
 

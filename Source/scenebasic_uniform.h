@@ -50,7 +50,6 @@ private:
     float deltaTime = 0.0f;
     float lastFrame = 0.0f;
     float startTime = glfwGetTime();
-
     float BlurIntensity = 0.0f; // unused
 
     bool BloomDebug = false; // DEBUG SETTINGS

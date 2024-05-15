@@ -8,6 +8,7 @@
 #include "gltext.h"
 
 #include <iomanip>
+#include <irrKlang.h>
 
 using std::string;
 using std::cerr;
@@ -44,6 +45,8 @@ unsigned int BloomBuffer = 1;
 unsigned int BloomBuffer2 = 2;
 unsigned int BlurBuffer1 = 3;
 unsigned int BlurBuffer2 = 4;
+
+irrklang::ISoundEngine* AudioEngine;
 
 ModelData FramebufferDisplay;
 
@@ -101,15 +104,22 @@ void SceneBasic_Uniform::initScene()
 
     boat.Init(); // boat loading logic
 
+
     if (!GameSession.Init()) { // game loading logic
         cout << "Game loading encountered an error.";
         exit(0);
     }                   
 
-
-
     gltInit(); // gltext library init
     Timer = gltCreateText();
+
+    AudioEngine = irrklang::createIrrKlangDevice();
+    if (!AudioEngine) {
+        cout << "Could not start audio engine.";
+    }
+
+    boat.AudioEngine = AudioEngine;
+    GameSession.AudioEngine = AudioEngine;
 
     // frame buffer object
     int FrameBuffCount = sizeof(Framebuffers) / sizeof(unsigned int); // Get count
@@ -340,7 +350,7 @@ void SceneBasic_Uniform::render() // Render loop
     glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
 
     glViewport(0, 0, 1024, 1024); // Depth map settings and MVP generation
-    glm::mat4 LightProj = glm::ortho(-7.0f, 7.0f, -7.0f, 7.0f, -12.0f, 12.0f); // tight view to ensure quality is best, also ortho to simulate light far away
+    glm::mat4 LightProj = glm::ortho(-3.0f, 3.0f, -2.0f, 4.0f, -8.0f, 8.0f); // tight view to ensure quality is best, also ortho to simulate light far away
     glm::vec3 NewLightPos = boat.GetBoatPosition() + (glm::normalize(LightPosition) * 0.3f); // Always pin it around the boat
     glm::mat4 LightView = glm::lookAt(NewLightPos, boat.GetBoatPosition() - glm::vec3(0.5f,0.0f,0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 
