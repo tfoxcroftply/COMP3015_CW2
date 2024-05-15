@@ -25,7 +25,8 @@ void main() {
         TexCoords = VertexTexCoords;
 
         vec4 WorldPos = ModelIn * vec4(VertexPosition, 1.0);
-        FragPositionLightSpace = LightMatrix * WorldPos;
+        FragPositionLightSpace = LightMatrix * WorldPos; // send frag position for shadow light space but relative to world
+
         gl_Position = ProjectionIn * ViewIn * ModelIn * vec4(VertexPosition, 1.0);
     } else {
         SkyboxCoords = VertexPosition;

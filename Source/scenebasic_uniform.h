@@ -51,9 +51,10 @@ private:
     float lastFrame = 0.0f;
     float startTime = glfwGetTime();
 
-    float BlurIntensity = 0.0f;
+    float BlurIntensity = 0.0f; // unused
 
-    bool BloomDebug = false;
+    bool BloomDebug = false; // DEBUG SETTINGS
+    bool BlurDebug = false;
     bool MovementEnabled = true;
     bool SkyboxEnabled = true;
     bool DepthDebug = false;

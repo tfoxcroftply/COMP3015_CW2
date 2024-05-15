@@ -79,7 +79,7 @@ struct Model {
 } */
 
 ModelData FrameRectangle() {
-    float Data[] = {
+    float Data[] = { // generate a square over the screen
          1.0f, -1.0f,  1.0f, 0.0f,
         -1.0f, -1.0f,  0.0f, 0.0f,
         -1.0f,  1.0f,  0.0f, 1.0f,

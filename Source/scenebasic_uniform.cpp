@@ -7,6 +7,8 @@
 #define GLT_IMPLEMENTATION
 #include "gltext.h"
 
+#include <iomanip>
+
 using std::string;
 using std::cerr;
 using std::endl;
@@ -37,7 +39,7 @@ unsigned int DepthMapFramebuffer;
 unsigned int DepthMapFramebufferTexture;
 unsigned int DepthMapRenderbuffer;
 
-unsigned int SceneBuffer = 0;
+unsigned int SceneBuffer = 0; // index positions
 unsigned int BloomBuffer = 1;
 unsigned int BloomBuffer2 = 2;
 unsigned int BlurBuffer1 = 3;
@@ -97,26 +99,26 @@ void SceneBasic_Uniform::initScene()
     sea.Transformation = glm::rotate(sea.Transformation, glm::radians(180.0f), vec3(0.0f, 0.0f, 0.0f));
     sea.Transformation = glm::scale(mat4(1.0f), vec3(40.0f, 1.0f, 40.0f));
 
-    boat.Init();
+    boat.Init(); // boat loading logic
 
-    if (!GameSession.Init()) {
+    if (!GameSession.Init()) { // game loading logic
         cout << "Game loading encountered an error.";
         exit(0);
     }                   
 
 
 
-    gltInit();
+    gltInit(); // gltext library init
     Timer = gltCreateText();
 
     // frame buffer object
-    int FrameBuffCount = sizeof(Framebuffers) / sizeof(unsigned int);
+    int FrameBuffCount = sizeof(Framebuffers) / sizeof(unsigned int); // Get count
 
-    glGenFramebuffers(FrameBuffCount, Framebuffers);
+    glGenFramebuffers(FrameBuffCount, Framebuffers); // Generate buffers
     glGenTextures(FrameBuffCount, FramebufferTextures);
     glGenRenderbuffers(FrameBuffCount, Renderbuffers);
 
-    for (unsigned int i = 0; i < FrameBuffCount; i++) {
+    for (unsigned int i = 0; i < FrameBuffCount; i++) { // loop for every buffer required
         glBindFramebuffer(GL_FRAMEBUFFER, Framebuffers[i]);
         glBindTexture(GL_TEXTURE_2D, FramebufferTextures[i]);
         glBindRenderbuffer(GL_RENDERBUFFER, Renderbuffers[i]);
@@ -135,7 +137,7 @@ void SceneBasic_Uniform::initScene()
             exit(EXIT_FAILURE);
         }
 
-        glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, width, height);
+        glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, width, height); // render buffer needed for main scene draw, but mostly unused for others
         glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, Renderbuffers[i]);
     }
 
@@ -146,10 +148,10 @@ void SceneBasic_Uniform::initScene()
     glGenTextures(1, &DepthMapFramebufferTexture);
     //glGenRenderbuffers(1, &DepthMapRenderbuffer);
 
-    GLfloat BorderColor[] = {1.0, 1.0, 1.0, 1.0};
+    GLfloat BorderColor[] = {1.0, 1.0, 1.0, 1.0}; // black to ensure out of frame doesnt count as a close texture
 
     glBindTexture(GL_TEXTURE_2D, DepthMapFramebufferTexture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, 1024, 1024, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, 1024, 1024, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL); // 1024 resolution for depth map
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
@@ -157,7 +159,7 @@ void SceneBasic_Uniform::initScene()
     glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, BorderColor);
 
     glBindFramebuffer(GL_FRAMEBUFFER, DepthMapFramebuffer);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, DepthMapFramebufferTexture, 0);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, DepthMapFramebufferTexture, 0); // depth parameters for correct depth detection
     glDrawBuffer(GL_NONE);
     glReadBuffer(GL_NONE);
 
@@ -171,15 +173,15 @@ void SceneBasic_Uniform::initScene()
 
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-    FramebufferDisplay = FrameRectangle();
+    FramebufferDisplay = FrameRectangle(); // generate screen quad
 
     prog.use();
     prog.setUniform("skybox", 0); // i found that explicit linking is required on nvidia opengl api, but seems to work without on intel
-    prog.setUniform("Texture", 1);
+    prog.setUniform("Texture", 1); // texture linking done for each shader
     prog.setUniform("Texture2", 2);
     prog.setUniform("DepthMap", 3);
 
-    gaussian.use();
+    gaussian.use(); 
     gaussian.setUniform("ScreenTexture", 0);
 
     bloom.use();
@@ -194,12 +196,13 @@ void SceneBasic_Uniform::initScene()
 
     //GameSession.LoadEntries(); for debugging
     //GameSession.SaveEntry(23023);
+    glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DEBUG_SEVERITY_NOTIFICATION, 0, nullptr, GL_FALSE);
 }
 
 void SceneBasic_Uniform::compile() // Provided by labs
 {
 	try {
-		prog.compileShader("resources/shaders/shader.vert");
+		prog.compileShader("resources/shaders/shader.vert"); // Shader loading and linking
 		prog.compileShader("resources/shaders/shader.frag");
 		prog.link();
 		prog.use();
@@ -236,12 +239,35 @@ void SceneBasic_Uniform::update(float t)
 void Blur(int Intensity, GLSLProgram& shader, int StartBuffer) {
     //glBindFramebuffer(GL_FRAMEBUFFER, SceneBuffer);
 
-    for (unsigned int i = 0; i < Intensity; i++) {
-        bool Horizontal = i % 2 == 0 ? true : false;
+    for (unsigned int i = 0; i < Intensity; i++) { // Blurring logic
+        bool Horizontal = i % 2 == 0 ? true : false; // Switch orientation for each pass
         shader.setUniform("HorizontalPass", Horizontal);
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, FramebufferTextures[StartBuffer]);
         glDrawArrays(GL_TRIANGLES, 0, 6);
+    }
+}
+
+void GenerateNodes(std::vector<glm::vec3> Nodes, GLSLProgram& prog, bool IsBoost) { // node generating logic, reusable for different types
+    for (unsigned int i = 0; i < Nodes.size(); i++) {
+        mat4 NodeBase = mat4(1.0f);
+        NodeBase[3][0] = Nodes[i].x; // extract node positions and add to blank mat4
+        NodeBase[3][1] = Nodes[i].y;
+        NodeBase[3][2] = Nodes[i].z;
+
+        float RotationDeg = fmod(glfwGetTime() * (360.0f / 5.0f), 360.0f); // movement logic
+        NodeBase = glm::rotate(NodeBase, glm::radians(RotationDeg), vec3(0.0f, 1.0f, 0.0f));
+
+        glActiveTexture(GL_TEXTURE1); // First texture always used
+        if (IsBoost) {
+            glBindTexture(GL_TEXTURE_2D, GameSession.NodeBoostTexture); // Blue texture for boost
+        } else {
+            glBindTexture(GL_TEXTURE_2D, (i == 0) ? GameSession.NodeNextTexture : GameSession.NodeTexture); // If first node in sequence, color green else red
+        }
+        glActiveTexture(GL_TEXTURE3);
+        glBindTexture(GL_TEXTURE_2D, DepthMapFramebufferTexture); // needs to be bound for shadows to draw over textures, this is repeated for other models
+        prog.setUniform("ModelIn", NodeBase);
+        GameSession.NodeModel->render();
     }
 }
 
@@ -257,7 +283,7 @@ void RenderScene(GLSLProgram& prog) {
     boatMesh->render();
 
     // Sea
-    mat4 SeaTranslated = glm::translate(sea.Transformation, vec3(sin(glfwGetTime()) * 0.004f, 0.0f, (sin(glfwGetTime()) * 0.004f) + 0.2f));
+    mat4 SeaTranslated = glm::translate(sea.Transformation, vec3(sin(glfwGetTime()) * 0.004f, 0.0f, (sin(glfwGetTime()) * 0.004f) + 0.2f)); // bobbing movement
     prog.setUniform("ModelIn", SeaTranslated);
     prog.setUniform("MixEnabled", true);
     glActiveTexture(GL_TEXTURE1); // First texture
@@ -270,23 +296,11 @@ void RenderScene(GLSLProgram& prog) {
     prog.setUniform("MixEnabled", false);
 
     // Game logic
-    GameSession.UpdatePlayerPosition(boat.GetBoatPosition());
-    std::vector<glm::vec3> Nodes = GameSession.GetActiveNodes();
-    for (unsigned int i = 0; i < Nodes.size(); i++) {
-        mat4 NodeBase = mat4(1.0f);
-        NodeBase[3][0] = Nodes[i].x;
-        NodeBase[3][1] = Nodes[i].y;
-        NodeBase[3][2] = Nodes[i].z;
+    GameSession.UpdatePlayerPosition(boat.GetBoatPosition()); // Game session logic to track player-node position
 
-        float RotationDeg = fmod(glfwGetTime() * (360.0f / 5.0f), 360.0f);
-        NodeBase = glm::rotate(NodeBase, glm::radians(RotationDeg), vec3(0.0f, 1.0f, 0.0f));
-        glActiveTexture(GL_TEXTURE1); // First texture
-        glBindTexture(GL_TEXTURE_2D, (i == 0) ? GameSession.NodeNextTexture : GameSession.NodeTexture);
-        glActiveTexture(GL_TEXTURE3);
-        glBindTexture(GL_TEXTURE_2D, DepthMapFramebufferTexture);
-        prog.setUniform("ModelIn", NodeBase);
-        GameSession.NodeModel->render();
-    }
+    GenerateNodes(GameSession.GetActiveNodes(), prog, false); // generate standard nodes
+    GenerateNodes(GameSession.GetActiveBoosts(), prog, true); // generate boost nodes in blue
+
 }
 
 void SceneBasic_Uniform::render() // Render loop
@@ -301,12 +315,16 @@ void SceneBasic_Uniform::render() // Render loop
     lastFrame = currentFrame;
 
     // ## CAMERA AND UNIFORMS ##
-
-    if (GameSession.RequestedBoatPos != glm::vec3(0.0f, 0.0f, 0.0f)) {
+    if (GameSession.RequestedBoatPos != glm::vec3(0.0f, 0.0f, 0.0f)) { // If boat position is changed, then send it to the boat - has to be done this way as i cant seem to make a boat reference in other headers
         glm::vec3 Pos = GameSession.RequestedBoatPos;
+        boat.Init(); // repurposed to reposition boat
         boat.SetPosition(Pos);
-        std::cout << "Move";
-        GameSession.RequestedBoatPos = glm::vec3(0.0f, 0.0f, 0.0f);
+        GameSession.RequestedBoatPos = glm::vec3(0.0f, 0.0f, 0.0f); // reset to prevent constant loops
+    }
+
+    if (GameSession.LastBoostTime != 0) { // Same thing here, only way to transfer between headers it seems
+        boat.LastBoostTime = GameSession.LastBoostTime;
+        GameSession.LastBoostTime = 0;
     }
 
     boat.Update(deltaTime); // Delta time is used to not have abnormal movement depending on frame time
@@ -318,37 +336,37 @@ void SceneBasic_Uniform::render() // Render loop
 
     // ## SHADOWMAP RENDER ##
     depth.use();
-    glBindFramebuffer(GL_FRAMEBUFFER, DepthMapFramebuffer);
+    glBindFramebuffer(GL_FRAMEBUFFER, DepthMapFramebuffer); // set target as depth map
     glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
 
-    glViewport(0, 0, 1024, 1024);
-    glm::mat4 LightProj = glm::ortho(-7.0f, 7.0f, -7.0f, 7.0f, -12.0f, 12.0f);
-    glm::vec3 NewLightPos = boat.GetBoatPosition() + (glm::normalize(LightPosition) * 0.3f);
+    glViewport(0, 0, 1024, 1024); // Depth map settings and MVP generation
+    glm::mat4 LightProj = glm::ortho(-7.0f, 7.0f, -7.0f, 7.0f, -12.0f, 12.0f); // tight view to ensure quality is best, also ortho to simulate light far away
+    glm::vec3 NewLightPos = boat.GetBoatPosition() + (glm::normalize(LightPosition) * 0.3f); // Always pin it around the boat
     glm::mat4 LightView = glm::lookAt(NewLightPos, boat.GetBoatPosition() - glm::vec3(0.5f,0.0f,0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 
-    depth.setUniform("LightMatrix", LightProj * LightView); // Send MVP base to shader, but leave models to be set per model
+    depth.setUniform("LightMatrix", LightProj * LightView); // Send MVP to shader to generate the scene from this point of view
     
-    glEnable(GL_CULL_FACE);
+    glEnable(GL_CULL_FACE); // Change cull settings to reduce "peter panning"
     glCullFace(GL_FRONT);
-    RenderScene(depth);
+    RenderScene(depth); // Render the scene but only to the depth buffer
     glCullFace(GL_BACK);
     glDisable(GL_CULL_FACE);
 
     // ## MAIN RENDER ##
 
     if (!DepthDebug) {
-        prog.use();
+        prog.use(); // Use main shader
 
         glViewport(0, 0, width, height);
         prog.setUniform("CameraPos", CamData.CameraPosition); // Send camera position for lighting calculations
         prog.setUniform("ViewIn", CamData.ViewMatrix); // Send MVP base to shader, but leave models to be set per model
         prog.setUniform("ProjectionIn", boat.Projection);
 
-        glBindFramebuffer(GL_FRAMEBUFFER, Framebuffers[SceneBuffer]);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        glBindFramebuffer(GL_FRAMEBUFFER, Framebuffers[SceneBuffer]); // Set the target to scene buffer, the main target
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // And clear it just in case
 
         // Skybox - Separated to avoid shadowmap collisions
-        if (SkyboxEnabled) {
+        if (SkyboxEnabled) { // Skybox enabled is a debug setting now
             glDisable(GL_DEPTH_TEST);
             prog.setUniform("SkyboxActive", true); // Fragment shader setting to skybox
             glBindVertexArray(skybox.Data.VAO);
@@ -359,54 +377,53 @@ void SceneBasic_Uniform::render() // Render loop
             prog.setUniform("SkyboxActive", false);
         }
 
-        glActiveTexture(GL_TEXTURE3);
+        glActiveTexture(GL_TEXTURE3); // Send the generated depth map to the shader
         glBindTexture(GL_TEXTURE_2D, DepthMapFramebufferTexture);
-        prog.setUniform("LightMatrix", LightProj * LightView);
+        prog.setUniform("LightMatrix", LightProj * LightView); // and associated light position values
 
-        RenderScene(prog);
+        RenderScene(prog); // Render the scene as usual, with the normal shader
 
         // ## POST PROCESSING ##
-        glDisable(GL_DEPTH_TEST);
+        glDisable(GL_DEPTH_TEST); // This was required for the screen frame to be drawn
 
 
         bloom.use();
-        bloom.setUniform("Mix", false);
+        bloom.setUniform("Mix", false); // select non mix mode to generate bloom buffer
         glBindFramebuffer(GL_FRAMEBUFFER, Framebuffers[BloomBuffer]);
         glBindVertexArray(FramebufferDisplay.VAO);
         glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, FramebufferTextures[SceneBuffer]);
+        glBindTexture(GL_TEXTURE_2D, FramebufferTextures[SceneBuffer]); // render it to scene buffer for later
         glDrawArrays(GL_TRIANGLES, 0, 6);
 
         gaussian.use();
-        Blur(6, gaussian, BloomBuffer);
+        Blur(6, gaussian, BloomBuffer); // use the blurring function to blur the bloom buffer to make it smooth
 
         bloom.use();
-        bloom.setUniform("Mix", true);
+        bloom.setUniform("Mix", true); // Mix the render scene buffer with the new bloom contents
         glBindFramebuffer(GL_FRAMEBUFFER, Framebuffers[SceneBuffer]);
         glBindVertexArray(FramebufferDisplay.VAO);
-        glActiveTexture(GL_TEXTURE0);
+        glActiveTexture(GL_TEXTURE0); // set both texture units this time
         glBindTexture(GL_TEXTURE_2D, FramebufferTextures[BloomBuffer]);
         glActiveTexture(GL_TEXTURE1);
         glBindTexture(GL_TEXTURE_2D, FramebufferTextures[SceneBuffer]);
         glDrawArrays(GL_TRIANGLES, 0, 6);
 
 
-        int Cycles = boat.GetBlurCycles();
-        if (Cycles > 0 or GameSession.IsFinished()) {
+        int Cycles = boat.GetBlurCycles(); // Gets the number of blur cycles to use, usually after stage completions
+        if (Cycles > 0 or GameSession.IsFinished() or BlurDebug) {
             gaussian.use();
-            Blur(8, gaussian, SceneBuffer);
+            Blur(4, gaussian, SceneBuffer); // Static number, it was intended to use dynamic numbers at first
         }
-
 
         base.use();
         base.setUniform("DepthMode", false);
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
         glBindVertexArray(FramebufferDisplay.VAO);
         glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, FramebufferTextures[BloomDebug == true ? BloomBuffer : SceneBuffer]);
+        glBindTexture(GL_TEXTURE_2D, FramebufferTextures[BloomDebug == true ? BloomBuffer : SceneBuffer]); // Select bloom or scene buffer based on bloom debug setting
         glDrawArrays(GL_TRIANGLES, 0, 6);
     } else {
-        base.use();
+        base.use(); // If depth testing enabled, only use this to display depth map
         base.setUniform("DepthMode", true);
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
         glBindVertexArray(FramebufferDisplay.VAO);
@@ -416,38 +433,66 @@ void SceneBasic_Uniform::render() // Render loop
 
     }
     
-    glBindVertexArray(0);
-
-    if (GameSession.MenuOption == "Start") {
-        gltSetText(Timer, "Find the first checkpoint to begin the game!");
+    if (GameSession.MenuOption == "Start") { 
+        gltSetText(Timer, "Find the first checkpoint to begin the game!"); // Display start message
         gltBeginDraw();
         gltColor(1.0f, 1.0f, 1.0f, 1.0f);
         gltDrawText2DAligned(Timer, this->width / 2, this->height - 50, 1.5f, GLT_CENTER, GLT_BOTTOM);
         gltEndDraw();
-    } else if (GameSession.MenuOption == "Running") {
 
-        gltSetText(Timer, "Nodes: " + GameSession.ActiveLevel + "/5");
+    } else if (GameSession.MenuOption == "Running") { // Display game related messages
+        std::string NodeText = "Level: " + std::to_string(GameSession.ActiveLevel) + "/" + std::to_string(GameSession.GetLevelCount());
+        gltSetText(Timer, NodeText.c_str());
         gltBeginDraw();
         gltColor(1.0f, 1.0f, 1.0f, 1.0f);
         gltDrawText2DAligned(Timer, this->width - 5, this->height - 65, 1.5f, GLT_RIGHT, GLT_BOTTOM);
         gltEndDraw();
 
-        gltSetText(Timer, "Level: 1/5");
+        std::string LevelText = "Nodes: " + std::to_string(GameSession.LastNodeTotal - GameSession.LastNodeCount) + "/" + std::to_string(GameSession.LastNodeTotal); // Display time
+        gltSetText(Timer, LevelText.c_str());
         gltBeginDraw();
         gltColor(1.0f, 1.0f, 1.0f, 1.0f);
         gltDrawText2DAligned(Timer, this->width - 5, this->height - 35, 1.5f, GLT_RIGHT, GLT_BOTTOM);
         gltEndDraw();
 
-        gltSetText(Timer, "Time: ");
+        std::ostringstream TimeText;
+        TimeText << "Time: " << std::fixed << std::setprecision(3) << float(GameSession.GetTime()) / 1000.0f; // format to 3 decimal places
+        gltSetText(Timer, TimeText.str().c_str());
         gltBeginDraw();
         gltColor(1.0f, 1.0f, 1.0f, 1.0f);
         gltDrawText2DAligned(Timer, this->width - 5, this->height - 5, 1.5f, GLT_RIGHT, GLT_BOTTOM);
         gltEndDraw();
 
+    } else if (GameSession.MenuOption == "Finish") { // Display finish messages
+        gltSetText(Timer, "Finish!");
+        gltBeginDraw();
+        gltColor(1.0f, 1.0f, 1.0f, 1.0f);
+        gltDrawText2DAligned(Timer, this->width / 2, 150, 2.5f, GLT_CENTER, GLT_TOP);
+        gltEndDraw();
+
+        GameData Entries = GameSession.LoadEntries(); // For each entry returned, make an entry and display it
+        for (unsigned int i = 0; i < Entries.MillisecondsSorted.size(); i++) {
+            int Entry = Entries.MillisecondsSorted[i];
+
+            std::ostringstream EntryText;
+            EntryText << i + 1 << " - " << std::fixed << std::setprecision(5) << float(Entry) / 1000.0f;
+
+            gltSetText(Timer, EntryText.str().c_str());
+            gltBeginDraw();
+
+            if (Entry == GameSession.SaveTime) { // If it is the current session's time, highlight it green
+                gltColor(0.0f, 1.0f, 0.0f, 1.0f);
+            } else {
+                gltColor(1.0f, 1.0f, 1.0f, 1.0f);
+            }
+
+            gltDrawText2DAligned(Timer, this->width / 2, 200 + (i * 30), 1.5f, GLT_CENTER, GLT_TOP);
+            gltEndDraw();
+        }
 
     }
 
-
+    glBindVertexArray(0); // Unbinding
 
     //glBindVertexArray(0);
 

@@ -30,20 +30,37 @@ uniform float BlurStrength;
 uniform vec3 CameraPos;
 
 float ShadowCalc(vec4 TempFragPosLightSpace, vec3 LightDirection) {
-    vec3 Coordinates = TempFragPosLightSpace.xyz / TempFragPosLightSpace.w;
-    Coordinates = Coordinates * 0.5 + 0.5;
-    float ClosestDepth = texture(DepthMap, Coordinates.xy).r; 
-    float CurrentDepth = Coordinates.z;
-    
-    if (CurrentDepth < 0.0 || CurrentDepth > 1.0) {
-        return 0.0;
+    int KernelWidth = 3; // 6x6
+
+    vec3 Coordinates = TempFragPosLightSpace.xyz / TempFragPosLightSpace.w; // normalising
+    Coordinates = Coordinates * 0.5 + 0.5; // change to [0,1] range
+
+    float ClosestDepth = texture(DepthMap, Coordinates.xy).r; // get depth fragment
+    float CurrentDepth = Coordinates.z; // get depth from fragment
+    if (CurrentDepth < 0.0f || CurrentDepth > 1.0f) { // backup to prevent artifacts and random shadows
+        return 0.0f; // return to skip rest of other stuff
     }
 
-    float Bias = max(0.002 * (1.0 - dot(normalize(Normal), normalize(LightDirection))), 0.0001);
+    //float Bias = 0.005f;
+    float Bias = max(0.005 * (1.0 - dot(normalize(Normal), normalize(LightDirection))), 0.001);
 
-    float ShadowValue = (CurrentDepth - Bias) > ClosestDepth ? 1.0 : 0.0;
+    //float Dist = length(TempFragPosLightSpace.xyz);
+    //Bias = max(Bias * (1.0f + Dist / 100.0f), 0.001f);
 
-    return ShadowValue;
+    float Shadow = 0.0f;
+    float TexelSize = 1.0f / textureSize(DepthMap, 0).x; // assuming a square depth map
+
+    for (int X = -KernelWidth; X <= KernelWidth; ++X) { // x and y loops to span entire depth map
+        for (int Y = -KernelWidth; Y <= KernelWidth; ++Y) { 
+            float PCFDepth = texture(DepthMap, Coordinates.xy + vec2(X, Y) * TexelSize).r; // get texel from step in loop
+            if (CurrentDepth - Bias > PCFDepth) { // check if in shadow
+                Shadow += 1.0f; // add shadowed pixel to total
+            }
+        }
+    }
+
+    int SampleArea = (KernelWidth * 2 + 1) * (KernelWidth * 2 + 1); // get sample area total size
+    return Shadow / SampleArea; // reduce final output by how many pixels it sampled
 }
 
 void main() {
@@ -71,7 +88,7 @@ void main() {
         vec3 MixedDiffuse = Diffuse * LightColor;
         float SpecularShine = pow(max(dot(CameraDirection, ReflectionDirection), 0.0), 80); // calculations created with help from learnopengl
         vec3 Specular = 1.0f * SpecularShine * LightColor;
-        float Shadow = ShadowCalc(FragPositionLightSpace, LightDirection);
+        float Shadow = ShadowCalc(FragPositionLightSpace, LightDirection); // get 0-1 value through function
         vec3 Stage1 = (Ambient + (1.0 - Shadow) * (MixedDiffuse + Specular)) * NewTexture; // phong output
 
         //Reflection - stage 2
