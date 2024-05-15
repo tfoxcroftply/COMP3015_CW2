@@ -55,7 +55,7 @@ The main render loop runs until interrupted by the escape key. In the render loo
 After the main render is complete, post-processing is applied, such as gaussian blur and bloom. These take the framebuffers and apply changes to it, before combining it all together and outputting it into the default viewable framebuffer.
 
 ## User interaction
-To interact with this project, there are two main folders, "Compiled" and "Source". The compiled folder contains a pre-compiled executable version of my project, allowing users to open it as is.
+To interact with this project, there are two main folders, "Compiled" and "Source". The compiled folder contains a pre-compiled executable version of my project, allowing users to open it as is. **The .zip folder must be extracted in order to run correctly.**
 Mouse and keyboard controls have also been implemented for this scene, allowing for response based on user input. In this scene, the mouse controls the camera direction around the boat, and the keyboard "WASD" keys control the boat itself. The escape key has also been linked to exit the program.
 The aim of the scene is to collect as many diamonds within each level as fast as possible. The user must drive the boat into the green diamonds, optionally driving into the blue diamonds as well, which serve as boost powerups.
 The game is also timed, allowing for users to check their completion times. The game also saves time data into a file, which this data is presented at the end of every game using an on-screen leaderboard.
