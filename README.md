@@ -89,7 +89,7 @@ This project is not as clean as I would like it to be, and for me to be fully sa
 While my program does have bias calculations built in for shadowmap use, it is by no means perfect. If I were to redo the project, I would want to better understand the bias calculations to perfect it.
 
 ## YouTube video
-https://youtu.be/S_vdtu2Pcu8
+https://youtu.be/aE-pXoOr3Kk
 
 ## Credits
 glText (Text rendering) - https://github.com/vallentin/glText
